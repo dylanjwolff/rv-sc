@@ -1,0 +1,3 @@
+[submodule "verx-benchmarks"]
+	path = verx-benchmarks
+	url = https://github.com/eth-sri/verx-benchmarks

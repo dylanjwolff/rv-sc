@@ -5,8 +5,9 @@ from solidity_parser import parser
 
 
 class V:
-    def visitPragmaDirective(self, n: parser.Node):
-        print("Example Visitor: " + str(n))
+    def visitBinaryOperation(self, n: parser.Node):
+        if n.operator == '=':
+            print("Example Visitor: " + str(n))
 
 
 ast = parser.parse_file(sys.argv[1])

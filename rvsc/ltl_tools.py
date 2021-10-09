@@ -1,28 +1,18 @@
-from os import name
-import spot
-import sys
-import pprint
-from parsec import *
-
-from solidity_parser import parser
-
-
-class V:
-    def visitBinaryOperation(self, n: parser.Node):
-        if n.operator == '=':
-            pass
-            # pprint.pprint(n.left)
-
-
-ast = parser.parse_file(sys.argv[1])
-# pprint.pprint(ast)
-parser.visit(ast, V())
-
-print(spot.version())
-g: spot.twa_graph = spot.translate('!F(red & X(yellow))', 'monitor', 'det')
-g_str = g.to_str()
-
 from lark import Lark
+from lark import Transformer
+import lark
+
+## Grammar below copied from https://github.com/adl/hoaf/
+# label-expr ::= BOOLEAN | INT | ANAME | "!" label-expr
+#              | "(" label-expr ")"
+#              | label-expr "&" label-expr
+#              | label-expr "|" label-expr
+
+# body             ::= (state-name edge*)*
+# state-name       ::= "State:" label? INT STRING? acc-sig?
+# acc-sig          ::= "{" INT* "}"
+# edge             ::= label? state-conj acc-sig?
+# label            ::= "[" label-expr "]"
 
 leparser = Lark(r"""
     labelexpr:    bool 
@@ -50,11 +40,6 @@ leparser = Lark(r"""
     %ignore WS
     """,
                 start='body')
-body_str = g_str.split("--BODY--")[-1].split("--END--")[0]
-print(body_str)
-ptree = leparser.parse(body_str)
-
-from lark import Transformer
 
 
 class Edge:
@@ -68,9 +53,6 @@ class Edge:
 
     def __repr__(self):
         return "Edge()"
-
-
-import lark
 
 
 class MyTransformer(Transformer):
@@ -90,10 +72,17 @@ class MyTransformer(Transformer):
         return Edge(cond, dest, accsig)
 
 
-tformed = MyTransformer().transform(ptree)
+def ltl_to_ba_ast(ltl_str):
+    body_str = ltl_str.split("--BODY--")[-1].split("--END--")[0]
+
+    ptree = leparser.parse(body_str)
+
+    tformed = MyTransformer().transform(ptree)
+
+    return tformed
 
 
-def pretty_exp(e: lark.Tree):
+def pretty_print_ba_exp(e: lark.Tree):
     s = ""
     if e.data == "bool":
         (b, ) = e.children
@@ -104,43 +93,33 @@ def pretty_exp(e: lark.Tree):
         s += f"v{n}"
         return s
     elif e.data == "not":
-        s += f'!{pretty_exp(e.children[0])}'
+        s += f'!{pretty_print_ba_exp(e.children[0])}'
         return s
     elif e.data == "paren":
-        mid = pretty_exp(e.children[0])
+        mid = pretty_print_ba_exp(e.children[0])
         s += f"{s} ({mid})"
         return s
     elif e.data == "and":
-        left = pretty_exp(e.children[0])
-        right = pretty_exp(e.children[1])
+        left = pretty_print_ba_exp(e.children[0])
+        right = pretty_print_ba_exp(e.children[1])
         s += f"{left} and {right}"
         return s
     elif e.data == "or":
-        left = pretty_exp(e.children[0])
-        right = pretty_exp(e.children[1])
+        left = pretty_print_ba_exp(e.children[0])
+        right = pretty_print_ba_exp(e.children[1])
         s += f"{left} or {right}"
         return s
     else:
         raise ValueError("switch case exhausted")
 
 
-pretty_s = ""
-for state in tformed:
-    pretty_s += f"\nif state == {state[0].children[0]}:"
-    for edge in state[1]:
-        if edge.cond != None:
-            pretty_s += f'\n\tif {pretty_exp(edge.cond[0])}:'
-        pretty_s += f"\n\t\tstate = {edge.dest.children[0]}"
+def pretty_print_ba_ast(ba_ast):
+    pretty_s = ""
+    for state in ba_ast:
+        pretty_s += f"\nif state == {state[0].children[0]}:"
+        for edge in state[1]:
+            if edge.cond != None:
+                pretty_s += f'\n\tif {pretty_print_ba_exp(edge.cond[0])}:'
+            pretty_s += f"\n\t\tstate = {edge.dest.children[0]}"
 
-print(pretty_s)
-
-# label-expr ::= BOOLEAN | INT | ANAME | "!" label-expr
-#              | "(" label-expr ")"
-#              | label-expr "&" label-expr
-#              | label-expr "|" label-expr
-
-# body             ::= (state-name edge*)*
-# state-name       ::= "State:" label? INT STRING? acc-sig?
-# acc-sig          ::= "{" INT* "}"
-# edge             ::= label? state-conj acc-sig?
-# label            ::= "[" label-expr "]"
+    return pretty_s

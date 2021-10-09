@@ -1,6 +1,7 @@
 antlr4-python3-runtime==4.9.2
 arrow==1.2.0
 astroid==2.8.0
+attrs==21.2.0
 backcall==0.2.0
 boto3==1.18.56
 botocore==1.21.56
@@ -8,6 +9,7 @@ buddy==0.0.3
 click==8.0.1
 decorator==5.1.0
 fastdiff==0.3.0
+iniconfig==1.1.1
 ipython==7.28.0
 isort==5.9.3
 jedi==0.18.0
@@ -16,15 +18,20 @@ lark==0.11.3
 lazy-object-proxy==1.6.0
 matplotlib-inline==0.1.3
 mccabe==0.6.1
+packaging==21.0
 parsec==3.9
 parso==0.8.2
 pexpect==4.8.0
 pickleshare==0.7.5
 platformdirs==2.4.0
+pluggy==1.0.0
 prompt-toolkit==3.0.20
 ptyprocess==0.7.0
+py==1.10.0
 Pygments==2.10.0
 pylint==2.11.1
+pyparsing==2.4.7
+pytest==6.2.5
 python-dateutil==2.8.2
 PyYAML==5.4.1
 s3transfer==0.5.0

@@ -53,16 +53,21 @@ leparser = Lark(r"""
 body_str = g_str.split("--BODY--")[-1].split("--END--")[0]
 print(body_str)
 ptree = leparser.parse(body_str)
-print(ptree.pretty())
 
 from lark import Transformer
 
 
 class Edge:
-    def __init__(a, b, c):
+    def __init__(self, a, b, c):
         self.cond = a
         self.dest = b
         self.accsig = c
+
+    def __str__(self):
+        return f"Edge({self.cond}, {self.dest}, {self.accsig})"
+
+    def __repr__(self):
+        return "Edge()"
 
 
 import lark
@@ -78,24 +83,54 @@ class MyTransformer(Transformer):
         return list(b)
 
     def edge(self, e: lark.Tree):
-        if e[0].data == "label":
-            print("LAV")
-        return e
+        cond = e[0].children if e[0].data == "label" else None
+        dest = e[1] if e[0].data == "label" else e[0]
+        accsig = e[-1] if e[-1].data == "accsig" else None
+
+        return Edge(cond, dest, accsig)
 
 
 tformed = MyTransformer().transform(ptree)
-print(tformed)
 
 
 def pretty_exp(e: lark.Tree):
-    print(e)
+    s = ""
+    if e.data == "bool":
+        (b, ) = e.children
+        s += "TRUE" if b == "t" else "FALSE"
+        return s
+    elif e.data == "var":
+        (n, ) = e.children
+        s += f"v{n}"
+        return s
+    elif e.data == "not":
+        s += f'!{pretty_exp(e.children[0])}'
+        return s
+    elif e.data == "paren":
+        mid = pretty_exp(e.children[0])
+        s += f"{s} ({mid})"
+        return s
+    elif e.data == "and":
+        left = pretty_exp(e.children[0])
+        right = pretty_exp(e.children[1])
+        s += f"{left} and {right}"
+        return s
+    elif e.data == "or":
+        left = pretty_exp(e.children[0])
+        right = pretty_exp(e.children[1])
+        s += f"{left} or {right}"
+        return s
+    else:
+        raise ValueError("switch case exhausted")
 
 
 pretty_s = ""
 for state in tformed:
-    pretty_s += "\nif " + str(state[0]) + ":"
+    pretty_s += f"\nif state == {state[0].children[0]}:"
     for edge in state[1]:
-        pretty_exp(edge)
+        if edge.cond != None:
+            pretty_s += f'\n\tif {pretty_exp(edge.cond[0])}:'
+        pretty_s += f"\n\t\tstate = {edge.dest.children[0]}"
 
 print(pretty_s)
 

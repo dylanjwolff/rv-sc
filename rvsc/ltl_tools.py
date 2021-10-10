@@ -39,7 +39,7 @@ leparser = Lark(r"""
     %import common.WS
     %ignore WS
     """,
-                start='body')
+                start="body")
 
 
 class Edge:
@@ -72,6 +72,10 @@ class MyTransformer(Transformer):
         return Edge(cond, dest, accsig)
 
 
+class Unreachable(Exception):
+    pass
+
+
 def ltl_to_ba_ast(ltl_str):
     body_str = ltl_str.split("--BODY--")[-1].split("--END--")[0]
 
@@ -93,7 +97,7 @@ def pretty_print_ba_exp(e: lark.Tree):
         s += f"v{n}"
         return s
     elif e.data == "not":
-        s += f'!{pretty_print_ba_exp(e.children[0])}'
+        s += f"!{pretty_print_ba_exp(e.children[0])}"
         return s
     elif e.data == "paren":
         mid = pretty_print_ba_exp(e.children[0])
@@ -110,7 +114,7 @@ def pretty_print_ba_exp(e: lark.Tree):
         s += f"{left} or {right}"
         return s
     else:
-        raise ValueError("switch case exhausted")
+        raise Unreachable("Switch case exhausted!")
 
 
 def pretty_print_ba_ast(ba_ast):
@@ -119,7 +123,7 @@ def pretty_print_ba_ast(ba_ast):
         pretty_s += f"\nif state == {state[0].children[0]}:"
         for edge in state[1]:
             if edge.cond != None:
-                pretty_s += f'\n\tif {pretty_print_ba_exp(edge.cond[0])}:'
+                pretty_s += f"\n\tif {pretty_print_ba_exp(edge.cond[0])}:"
             pretty_s += f"\n\t\tstate = {edge.dest.children[0]}"
 
     return pretty_s

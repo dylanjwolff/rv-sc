@@ -1,4 +1,5 @@
 # Runtime Verification of Smart Contracts
+![example branch parameter](https://github.com/github/docs/actions/workflows/main.yml/badge.svg?branch=main)
 
 ## Building
 The easiest way to build the project is with docker.

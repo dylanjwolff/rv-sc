@@ -1,5 +1,5 @@
 # Runtime Verification of Smart Contracts
-![example branch parameter](https://github.com/github/docs/actions/workflows/main.yml/badge.svg?branch=main)
+[![main Actions Status](https://github.com/dylanjwolff/rv-sc/workflows/main/badge.svg)](https://github.com/dylanjwolff/rv-sc/actions)
 
 ## Building
 The easiest way to build the project is with docker.

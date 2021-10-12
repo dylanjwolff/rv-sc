@@ -12,19 +12,21 @@ class SourcePrettyPrinter:
         self.out_s = ""
 
     def visitVariableDeclaration(self, n: parser.Node):
-
         if get_or_default(n, "visibility", "default") != "default":
             self.out_s += f"{n.visibility}"
         if get_or_default(n, "isDeclaredConstant", False):
             self.out_s += " constant"
         if get_or_default(n, "storageLocation", False):
             self.out_s += n.storageLocation
+        self.visit(n.typeName)
         self.out_s += f" {n.name}"
 
-    def visitStateVariableDeclaration(self, n: parser.Node):
+    def visitUserDefinedTypeName(self, n: parser.Node):
+        self.out_s += n.namePath
 
+    def visitStateVariableDeclaration(self, n: parser.Node):
         for c in n.variables:
-            self.visitVariableDeclaration(c)
+            self.visit(c)
 
         if get_or_default(n, "initialValue", False):
             self.out_s += " = "
@@ -110,9 +112,6 @@ class SourcePrettyPrinter:
             self.visit(n.expression)
         self.out_s += ";"
 
-    def visitReturnParameters(self, n):
-        print(n)
-
     def visitAssemblyAssignment(self, n: parser.Node):
         self.out_s += f"{','.join(n.names)} := "
         self.visit(n.expression)
@@ -142,7 +141,6 @@ class SourcePrettyPrinter:
         self.visit(n.right)
 
     def visitIfStatement(self, n: parser.Node):
-
         self.out_s += "if ("
         self.visit(n.condition)
         self.out_s += ") "
@@ -176,15 +174,15 @@ class SourcePrettyPrinter:
             self.out_s += f"{n.names[0]} : "
             self.visit(n.arguments[0])
             for (name, arg) in zip(n.names[1:], n.arguments[1:]):
+                self.out_s += ", "
                 self.out_s += f"{name} : "
                 self.visit(arg)
-                self.out_s += ", "
             self.out_s += " }"
         elif len(n.arguments) > 0:
             self.visit(n.arguments[0])
             for arg in n.arguments[1:]:
-                self.visit(arg)
                 self.out_s += ", "
+                self.visit(arg)
         self.out_s += ")"
 
     def visitElementaryTypeName(self, n: parser.Node):
@@ -195,9 +193,14 @@ class SourcePrettyPrinter:
 
     def visitBlock(self, n: parser.Node):
         self.out_s += "{\n"
-        for (i, stmt) in enumerate(n.statements):
+        for stmt in n.statements:
             self.out_s += "\t"
-            self.visit(stmt)
+            if "return" in self.source_lines[stmt.loc["start"]["line"] - 1]:
+                self.out_s += "return "
+                self.visit(stmt)
+                self.out_s += ";\n"
+            else:
+                self.visit(stmt)
             self.out_s += "\n"
 
         self.out_s += "}\n"
@@ -252,6 +255,18 @@ class SourcePrettyPrinter:
         if n.name:
             self.out_s += f" {n.name}"
 
+    def visitInheritanceSpecifier(self, n: parser.Node):
+        self.out_s += " is "
+        self.visit(n.baseName)
+
+    def visitElementaryTypeNameExpression(self, n: parser.Node):
+        self.visit(n.typeName)
+
+    def visitModifierInvocation(self, n: parser.Node):
+        self.out_s += f" {n.name}"
+        if len(n.arguments) > 0:
+            self.visit_delim_list("(", n.arguments, ", ", ")")
+
     def visit_delim_list(self, before: str, items, sep: str, after: str):
         self.out_s += before
         if len(items) > 0:
@@ -266,7 +281,14 @@ class SourcePrettyPrinter:
         if hasattr(self, method_name):
             return getattr(self, method_name)(n)
         else:
-            self.out_s += substr_from_loc(self.source_lines, n.loc)
+            if empty_loc(n.loc):
+                raise Unimplemented(n)
+            self.out_s += f"<<<{substr_from_loc(self.source_lines, n.loc)}>>>"
+
+
+def empty_loc(a):
+    return a["start"]["line"] == a["end"]["line"] \
+        and a["start"]["column"] == a["end"]["column"]
 
 
 def get_or_default(n, attr, default):
@@ -280,7 +302,7 @@ def substr_from_loc(lines, loc):
     start_line = loc["start"]["line"] - 1
     start_col = loc["start"]["column"]
     end_line = loc["end"]["line"] - 1
-    end_col = loc["end"]["column"] - 1
+    end_col = loc["end"]["column"] + 1
     if start_line == end_line:
         return lines[start_line][start_col:end_col]
     else:
@@ -297,5 +319,5 @@ ast = parser.parse_file(fname, loc=True)
 with open(fname, "r") as f:
     lines = f.readlines()
     p = SourcePrettyPrinter(lines)
-    parser.visit(ast, p)
+    p.visit(ast)
     print(p.out_s)

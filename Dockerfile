@@ -14,6 +14,7 @@ RUN rm -rf spot-2.9.8
 RUN rm spot.tar.gz
 RUN ldconfig
 RUN cp -r /usr/local/lib/python3.8/site-packages/spot .
+COPY verx-benchmarks/ verx-benchmarks
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt

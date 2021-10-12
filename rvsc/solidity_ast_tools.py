@@ -12,13 +12,14 @@ class SourcePrettyPrinter:
         self.out_s = ""
 
     def visitVariableDeclaration(self, n: parser.Node):
+        self.visit(n.typeName)
+
         if get_or_default(n, "visibility", "default") != "default":
-            self.out_s += f"{n.visibility}"
+            self.out_s += f" {n.visibility} "
         if get_or_default(n, "isDeclaredConstant", False):
             self.out_s += " constant"
         if get_or_default(n, "storageLocation", False):
             self.out_s += n.storageLocation
-        self.visit(n.typeName)
         self.out_s += f" {n.name}"
 
     def visitUserDefinedTypeName(self, n: parser.Node):
@@ -34,7 +35,7 @@ class SourcePrettyPrinter:
         self.out_s += ";"
 
     def visitBooleanLiteral(self, n: parser.Node):
-        self.out_s += str(n.value)
+        self.out_s += str(n.value).lower()
 
     def visitSourceUnit(self, n):
         for c in n.children:
@@ -50,7 +51,8 @@ class SourcePrettyPrinter:
 
     def visitFunctionDefinition(self, n: parser.Node):
         if n.isConstructor:
-            self.out_s += "constructor "
+            # NOTE this is constructor in the TS pretty-printer
+            self.out_s += "function "
         else:
             self.out_s += "function "
 
@@ -64,13 +66,13 @@ class SourcePrettyPrinter:
             self.out_s += " "
 
         if n.visibility != "default":
-            self.out_s += " " + n.visibility
+            self.out_s += f" {n.visibility} "
 
         if n.stateMutability:
             self.out_s += " " + n.stateMutability
 
         if n.returnParameters:
-            self.out_s += " "
+            self.out_s += " returns "
             self.visit(n.returnParameters)
 
         if n.body:
@@ -83,7 +85,7 @@ class SourcePrettyPrinter:
         self.out_s += f"{n.kind} {n.name}"
 
         if len(n.baseContracts) > 0:
-            self.visit_delim_list(" is ", n.baseContracts, ", ", "")
+            self.visit_delim_list(" is ", n.baseContracts, ", ", " ")
         else:
             self.out_s += " "
 
@@ -130,7 +132,7 @@ class SourcePrettyPrinter:
         self.out_s += n.value
 
     def visitStringLiteral(self, n: parser.Node):
-        self.out_s += n.value
+        self.out_s += f'"{n.value}"'
 
     def visitNumberLiteral(self, n: parser.Node):
         self.out_s += n.number
@@ -245,7 +247,7 @@ class SourcePrettyPrinter:
         self.out_s += "]"
 
     def visitPragmaDirective(self, n: parser.Node):
-        self.out_s += f"pragma {n.name} {n.value}\n"
+        self.out_s += f"pragma {n.name} {n.value};\n"
 
     def visitParameterList(self, n):
         self.visit_delim_list("(", n.parameters, ", ", ")")
@@ -256,7 +258,6 @@ class SourcePrettyPrinter:
             self.out_s += f" {n.name}"
 
     def visitInheritanceSpecifier(self, n: parser.Node):
-        self.out_s += " is "
         self.visit(n.baseName)
 
     def visitElementaryTypeNameExpression(self, n: parser.Node):
@@ -266,6 +267,25 @@ class SourcePrettyPrinter:
         self.out_s += f" {n.name}"
         if len(n.arguments) > 0:
             self.visit_delim_list("(", n.arguments, ", ", ")")
+
+    def visitEventDefinition(self, n: parser.Node):
+        self.out_s += f"event {n.name}"
+        self.visit(n.parameters)
+        self.out_s += ";"
+
+    def visitModifierDefinition(self, n: parser.Node):
+        self.out_s += f"modifier {n.name}"
+        self.visit(n.parameters)
+        self.visit(n.body)
+
+    def visitNewExpression(self, n: parser.Node):
+        self.out_s += "new "
+        self.visit(n.typeName)
+
+    def visitUsingForDeclaration(self, n: parser.Node):
+        self.out_s += f"using {n.libraryName} for "
+        self.visit(n.typeName)
+        self.out_s += ";"
 
     def visit_delim_list(self, before: str, items, sep: str, after: str):
         self.out_s += before
@@ -281,9 +301,17 @@ class SourcePrettyPrinter:
         if hasattr(self, method_name):
             return getattr(self, method_name)(n)
         else:
-            if empty_loc(n.loc):
+            if empty_loc(n.loc) or has_child(n):
                 raise Unimplemented(n)
             self.out_s += f"<<<{substr_from_loc(self.source_lines, n.loc)}>>>"
+
+
+def has_child(n: parser.Node):
+    for attr in n.keys():
+        print(type(n[attr]))
+        if type(n[attr]) == parser.Node:
+            return True
+    return False
 
 
 def empty_loc(a):
@@ -302,7 +330,7 @@ def substr_from_loc(lines, loc):
     start_line = loc["start"]["line"] - 1
     start_col = loc["start"]["column"]
     end_line = loc["end"]["line"] - 1
-    end_col = loc["end"]["column"] + 1
+    end_col = loc["end"]["column"]
     if start_line == end_line:
         return lines[start_line][start_col:end_col]
     else:
@@ -311,13 +339,3 @@ def substr_from_loc(lines, loc):
             s += lines[lnum]
         s += lines[end_line][0:end_col]
         return s
-
-
-fname = '/home/wolffd/git/rv-sc/verx-benchmarks/Zilliqa/main.sol'
-ast = parser.parse_file(fname, loc=True)
-
-with open(fname, "r") as f:
-    lines = f.readlines()
-    p = SourcePrettyPrinter(lines)
-    p.visit(ast)
-    print(p.out_s)

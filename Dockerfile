@@ -16,6 +16,15 @@ RUN ldconfig
 RUN cp -r /usr/local/lib/python3.8/site-packages/spot .
 COPY verx-benchmarks/ verx-benchmarks
 
+RUN apt update
+RUN yes | apt upgrade
+ENV DEBIAN_FRONTEND=noninteractive
+RUN yes | apt install npm
+RUN mkdir ~/.npm-global
+RUN npm config set prefix '~/.npm-global'
+ENV PATH=~/.npm-global/bin:$PATH
+RUN npm install -g solc-js@0.4
+
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 COPY rvsc/ rvsc

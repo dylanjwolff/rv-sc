@@ -1,5 +1,7 @@
 from rvsc import solidity_ast_tools
 from solidity_parser import parser
+from rvsc import solc_vm
+import tempfile
 
 
 def test_pprint_no_information_loss():
@@ -28,9 +30,15 @@ def test_pprint_compiles():
     fname = 'verx-benchmarks/Zilliqa/main.sol'
     ast = parser.parse_file(fname, loc=True)
 
-    with open(fname, "r") as f:
+    with open(fname, "r") as f, tempfile.NamedTemporaryFile(mode="w") as ftemp:
         lines = f.readlines()
         p = solidity_ast_tools.SourcePrettyPrinter(lines)
         p.visit(ast)
 
-        print(p.compiler_version)
+        ftemp.write(p.out_s)
+        ftemp.flush()
+
+        solc = solc_vm.Solc(p.compiler_version, major=True)
+        result = solc.exec(ftemp.name)
+
+        assert result.returncode == 0, f"Failed to compile {fname}:\n {result.stderr.decode('utf-8')}"

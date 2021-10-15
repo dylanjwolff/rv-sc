@@ -16,12 +16,15 @@ RUN ldconfig
 RUN cp -r /usr/local/lib/python3.8/site-packages/spot .
 COPY verx-benchmarks/ verx-benchmarks
 
-RUN wget https://github.com/ethereum/solidity/releases/download/v0.5.0/solc-static-linux
+RUN yes | apt install wget
+COPY rvsc/solc_vm.py rvsc/solc_vm.py
+COPY config/ config
+RUN python3 rvsc/solc_vm.py -M v0.4.0
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-COPY rvsc/ rvsc
 COPY test/ test
+COPY rvsc/ rvsc
 
 RUN pytest
 

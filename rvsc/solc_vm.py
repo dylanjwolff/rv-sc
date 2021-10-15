@@ -1,11 +1,12 @@
 import os
+import subprocess
 
 # Note the static binaries are Linux only, so OK to assume /'s for paths
 INSTALL_DIR = os.path.expanduser("~/.solc-vm")
 
 
 class Solc:
-    def __init__(self, v: str):
+    def __init__(self, v: str, major=False):
         os.system(f"mkdir -p {INSTALL_DIR}")
         fname = f"solc-{v}"
         if not os.path.exists(f"{INSTALL_DIR}/{fname}"):

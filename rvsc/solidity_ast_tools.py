@@ -10,6 +10,7 @@ class SourcePrettyPrinter:
     def __init__(self, source_lines):
         self.source_lines = source_lines
         self.out_s = ""
+        self.compiler_version = None
 
     def visitVariableDeclaration(self, n: parser.Node):
         self.visit(n.typeName)
@@ -247,6 +248,7 @@ class SourcePrettyPrinter:
         self.out_s += "]"
 
     def visitPragmaDirective(self, n: parser.Node):
+        self.compiler_version = n.value
         self.out_s += f"pragma {n.name} {n.value};\n"
 
     def visitParameterList(self, n):

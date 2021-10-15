@@ -2,11 +2,17 @@ from rvsc import solidity_ast_tools
 from solidity_parser import parser
 from rvsc import solc_vm
 import tempfile
+import pytest
+from pathlib import Path
 
 
-def test_pprint_no_information_loss():
+@pytest.mark.parametrize(
+    "fname",
+    list(Path("verx-benchmarks").glob("*/*.sol"))[0:5],
+)
+def test_pprint_no_information_loss(fname):
     # @TODO make sure relative pathing is done Pythonically
-    fname = 'verx-benchmarks/Zilliqa/main.sol'
+    print(f"TESTING {fname}")
     ast = parser.parse_file(fname, loc=True)
 
     with open(fname, "r") as f:
@@ -21,8 +27,7 @@ def test_pprint_no_information_loss():
         p.visit(ast)
         second_s = p.out_s
 
-        print(len(first_s), len(second_s))
-        assert first_s == second_s
+        assert second_s == first_s
 
 
 def test_pprint_compiles():

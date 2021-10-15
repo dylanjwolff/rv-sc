@@ -197,6 +197,8 @@ class SourcePrettyPrinter:
     def visitBlock(self, n: parser.Node):
         self.out_s += "{\n"
         for stmt in n.statements:
+            if stmt == None:
+                continue
             self.out_s += "\t"
             if "return" in self.source_lines[stmt.loc["start"]["line"] - 1]:
                 self.out_s += "return "
@@ -289,6 +291,21 @@ class SourcePrettyPrinter:
         self.visit(n.typeName)
         self.out_s += ";"
 
+    def visitEnumDefinition(self, n: parser.Node):
+        self.out_s += f"enum {n.name} "
+        self.visit_delim_list("{", n.members, ", ", "}")
+
+    def visitEnumValue(self, n: parser.Node):
+        self.out_s += f"{n.name} "
+
+    def visitEmitStatement(self, n: parser.Node):
+        self.out_s += f"emit "
+        self.visit(n.eventCall)
+
+    def visitStructDefinition(self, n: parser.Node):
+        self.out_s += f"struct {n.name}"
+        self.visit_delim_list("{", n.members, ";\n", "}")
+
     def visit_delim_list(self, before: str, items, sep: str, after: str):
         self.out_s += before
         if len(items) > 0:
@@ -298,21 +315,29 @@ class SourcePrettyPrinter:
                 self.visit(item)
         self.out_s += after
 
-    def visit(self, n: parser.Node):
+    def visit(self, n):
+        if type(n) == list:
+            for c in n:
+                self.visit(c)
+            return
         method_name = "visit" + n.type
         if hasattr(self, method_name):
             return getattr(self, method_name)(n)
         else:
             if empty_loc(n.loc) or has_child(n):
                 raise Unimplemented(n)
-            self.out_s += f"<<<{substr_from_loc(self.source_lines, n.loc)}>>>"
+            print(n)
+            self.out_s += f"{substr_from_loc(self.source_lines, n.loc)}"
 
 
 def has_child(n: parser.Node):
     for attr in n.keys():
-        print(type(n[attr]))
         if type(n[attr]) == parser.Node:
             return True
+        if type(n[attr] == list):
+            if len(n[attr]) > 0:
+                if type(n[attr][0]) == parser.Node:
+                    return True
     return False
 
 

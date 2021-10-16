@@ -6,12 +6,12 @@ import pytest
 from pathlib import Path
 
 
+# @TODO make sure relative pathing is done Pythonically
 @pytest.mark.parametrize(
     "fname",
-    list(Path("verx-benchmarks").glob("*/*.sol"))[0:5],
+    list(Path("verx-benchmarks").glob("*/*.sol"))[0:3],
 )
 def test_pprint_no_information_loss(fname):
-    # @TODO make sure relative pathing is done Pythonically
     print(f"TESTING {fname}")
     ast = parser.parse_file(fname, loc=True)
 
@@ -22,6 +22,8 @@ def test_pprint_no_information_loss(fname):
 
         first_s = p.out_s
 
+        print(first_s)
+
         ast = parser.parse(first_s, loc=True)
         p = solidity_ast_tools.SourcePrettyPrinter(first_s.splitlines())
         p.visit(ast)
@@ -30,9 +32,12 @@ def test_pprint_no_information_loss(fname):
         assert second_s == first_s
 
 
-def test_pprint_compiles():
-    # @TODO make sure relative pathing is done Pythonically
-    fname = 'verx-benchmarks/Zilliqa/main.sol'
+# @TODO make sure relative pathing is done Pythonically
+@pytest.mark.parametrize(
+    "fname",
+    list(Path("verx-benchmarks").glob("*/*.sol"))[0:3],
+)
+def test_pprint_compiles(fname):
     ast = parser.parse_file(fname, loc=True)
 
     with open(fname, "r") as f, tempfile.NamedTemporaryFile(mode="w") as ftemp:
@@ -43,6 +48,7 @@ def test_pprint_compiles():
         ftemp.write(p.out_s)
         ftemp.flush()
 
+        print(f"COMP V {p.compiler_version}")
         solc = solc_vm.Solc(p.compiler_version, major=True)
         result = solc.exec(ftemp.name)
 

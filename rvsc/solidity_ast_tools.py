@@ -92,7 +92,7 @@ class SourcePrettyPrinter:
 
         self.visit_delim_list("{\n", n.subNodes, "\n", "\n}\n\n")
 
-    def visitInlineAssemblyStatement(self, n: parser.Node):
+    def visitInLineAssemblyStatement(self, n: parser.Node):
         self.out_s += f"{get_or_default(n, 'language', ' ')} "
         self.visit(n.body)
 
@@ -116,10 +116,14 @@ class SourcePrettyPrinter:
         self.out_s += ";"
 
     def visitAssemblyAssignment(self, n: parser.Node):
-        self.out_s += f"{','.join(n.names)} := "
+        self.visit_delim_list("{", n.names, ", ", "} := ")
         self.visit(n.expression)
 
     def visitAssemblyCall(self, n: parser.Node):
+        self.out_s += n.functionName
+        self.visit_delim_list("(", n.arguments, ", ", ")")
+
+    def visitAssemblyExpression(self, n: parser.Node):
         self.out_s += n.functionName
         self.visit_delim_list("(", n.arguments, ", ", ")")
 
@@ -301,15 +305,23 @@ class SourcePrettyPrinter:
     def visitEmitStatement(self, n: parser.Node):
         self.out_s += f"emit "
         self.visit(n.eventCall)
+        self.out_s += f";"
 
     def visitStructDefinition(self, n: parser.Node):
         self.out_s += f"struct {n.name}"
-        self.visit_delim_list("{", n.members, ";\n", "}")
+        self.visit_delim_list("{", n.members, ";\n", "}", always_sep=True)
 
-    def visit_delim_list(self, before: str, items, sep: str, after: str):
+    def visit_delim_list(self,
+                         before: str,
+                         items,
+                         sep: str,
+                         after: str,
+                         always_sep=False):
         self.out_s += before
         if len(items) > 0:
             self.visit(items[0])
+            if always_sep:
+                self.out_s += sep
             for item in items[1:]:
                 self.out_s += sep
                 self.visit(item)
@@ -334,7 +346,7 @@ def has_child(n: parser.Node):
     for attr in n.keys():
         if type(n[attr]) == parser.Node:
             return True
-        if type(n[attr] == list):
+        if type(n[attr]) == list:
             if len(n[attr]) > 0:
                 if type(n[attr][0]) == parser.Node:
                     return True

@@ -23,9 +23,14 @@ def major(v):
 
 class Solc:
     def __init__(self, v: str, major=False, use_major_match=False):
+        # @TODO clean this up
         v = v.strip()
-        v = v[1:]
+        if not v[0].isdigit():
+            v = v[1:]
         v = "v" + v
+        if not v[1].isdigit():
+            raise NameError
+
         fname = f"solc-{v}"
         self.fname = fname
         self.version = v

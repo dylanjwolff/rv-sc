@@ -90,7 +90,7 @@ def pretty_print_ba_exp(e: lark.Tree):
     s = ""
     if e.data == "bool":
         (b, ) = e.children
-        s += "TRUE" if b == "t" else "FALSE"
+        s += "true" if b == "t" else "false"
         return s
     elif e.data == "var":
         (n, ) = e.children

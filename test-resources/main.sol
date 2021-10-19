@@ -395,10 +395,10 @@ contract BuchiChecker {
 	function apply_updates_and_check() {
 		while (updates_v.length > 0) {
 			uint32 k = updates_k[updates_k.length-1];
-			updates_v.length = updates_k.length-1;
+			updates_k.length--;
 
 			bool v = updates_v[updates_v.length-1];
-			updates_v.length = updates_v.length-1;
+			updates_v.length--;
 
 			vars[k] = v;
 			check();

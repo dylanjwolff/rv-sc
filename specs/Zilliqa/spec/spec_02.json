@@ -1,7 +1,7 @@
-{
-        0: {
+[
+        {
                 "triggers": ["ZilliqaToken.balances", "ZilliqaToken.totalSupply"],
                 "condition": "SUM(balances) == totalSupply"
         }
-}
+]
 

@@ -14,5 +14,6 @@ We need instrumentation to
     b) after that line, inject something that updates the global state
     c) changes the specs to a formula with only fresh vars, and keeps the mapping of vars to actual functions
 
+Inheritance is another potential issue. How do we instrument parent conctract methods that are invoked with "super"
 
     

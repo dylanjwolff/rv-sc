@@ -4,10 +4,65 @@ from collections import defaultdict
 import json
 import ltl_tools
 import spot
+import solidity_ast_tools
 
 
 class Unimplemented(Exception):
     pass
+
+
+class SplitRets:
+    def __init__(self, source_lines, contracts):
+        self.source_lines = [[l] for l in source_lines]
+        self.f_rets = []
+        self.contracts = contracts
+        self.contract = None
+
+    def visitContractDefinition(self, n: parser.Node):
+        self.contract = n.name
+
+    def visitFunctionDefinition(self, n: parser.Node):
+        if self.contract not in self.contracts:
+            return
+        if n.returnParameters:
+            self.f_rets = [
+                p.typeName.name for p in n.returnParameters.parameters
+            ]
+            if len(self.f_rets) > 1:
+                raise Unimplemented("multiple ret types not supported!")
+        else:
+            self.f_rets = []
+
+    def visitReturnStatement(self, n: parser.Node):
+        if self.contract not in self.contracts:
+            return
+
+        if not n.loc["end"]["line"] == n.loc["start"]["line"]:
+            raise Unimplemented("multi-line ret!")
+
+        source_line_index = n.loc["start"]["line"] - 1
+
+        pp = solidity_ast_tools.SourcePrettyPrinter([])
+        pp.visit(n.expression)
+        ret_exp = pp.out_s
+
+        temp_var_decls = []
+        temp_vars = []
+        for i, ret_t in enumerate(self.f_rets):
+            tv = f"temp_ret_instrum_{i}"
+            temp_var_decls += [f"{ret_t} {tv} = {ret_exp};\n"]
+            temp_vars += [tv]
+        ret_stmt = f'return {", ".join(temp_vars)};\n'
+        self.source_lines[source_line_index] = temp_var_decls + [ret_stmt]
+
+    def instrumented(self):
+        s = ""
+        for line in self.source_lines:
+            for sub_line in line:
+                if sub_line == None:
+                    continue
+                s += sub_line
+        return s
 
 
 class FixRets:
@@ -87,8 +142,12 @@ class SourceInstrumentor:
                 self.source_lines[line].extend(pprint_update(update))
 
         if len(n.body) > 0:
-            for line in fn_exits(n):
-                self.source_lines[line].append(FOOTER)
+            for line, is_ret in fn_exits(n):
+                if is_ret:
+                    self.source_lines[line] = [FOOTER
+                                               ] + self.source_lines[line]
+                else:
+                    self.source_lines[line].append(FOOTER)
 
     def instrumented(self):
         s = ""
@@ -164,10 +223,14 @@ def get_fn_name(fn: parser.Node):
 
 def fn_exits(fn: parser.Node):
     assert len(fn.body) > 0, "Exits only implemented for functions with bodies"
-    exits = [fn.body.statements[-1].loc["end"]["line"] - 1]
+    if fn.body.statements[-1].type == "ReturnStatement":
+        isRet = True
+    else:
+        isRet = False
+    exits = [(fn.body.statements[-1].loc["end"]["line"] - 1, isRet)]
     for stmt in fn.body.statements[0:-1]:
         if stmt.type == "ReturnStatement":
-            exits.append(stmt.loc["end"]["line"] - 1)
+            exits.append((stmt.loc["end"]["line"] - 1, True))
     return exits
 
 
@@ -244,9 +307,17 @@ with open(fname, "r") as f, \
     print(md)
 
     lines = f.readlines()
-    p = SourceInstrumentor(lines, md)
     # m = FindStateChanges()
     r = FixRets(lines)
+    sr = SplitRets(lines, md.keys())
+    parser.visit(ast, r)
+    parser.visit(ast, sr)
+    split_src = sr.instrumented()
+    lines = split_src.splitlines(keepends=True)
+
+    ast = parser.parse(split_src, loc=True)
+    r = FixRets(lines)
+    p = SourceInstrumentor(lines, md)
     parser.visit(ast, r)
     parser.visit(ast, p)
     # parser.visit(ast, m)
@@ -256,3 +327,5 @@ with open(fname, "r") as f, \
 
     with open("out.sol", "w") as fout:
         fout.write(s)
+        # print(s)
+        pass

@@ -2,9 +2,9 @@ from solidity_parser import parser
 from enum import Enum
 from collections import defaultdict
 import json
-import ltl_tools
+from . import ltl_tools
 import spot
-import solidity_ast_tools
+from . import solidity_ast_tools
 
 
 class Unimplemented(Exception):
@@ -287,47 +287,29 @@ def pprint_update(u, fn_name=None):
     return s
 
 
-contract_name = "Zilliqa"
-spec_name = "spec_02"
-
-metadata_file = f"specs/{contract_name}/spec/{spec_name}.json"
-spec_file = f"specs/{contract_name}/spec/{spec_name}.spot"
-
-fname = "verx-benchmarks/Zilliqa/main.sol"
-ast = parser.parse_file(fname, loc=True)
-
-with open(fname, "r") as f, \
-     open(metadata_file) as fm, \
-     open(spec_file) as fs:
-    md = json.load(fm)
+def instrument(md, spec, contract):
+    ast = parser.parse(contract, loc=True)
     spot_form = spot \
-        .translate(fs.read(), 'monitor', 'det').to_str()
+        .translate(spec, 'monitor', 'det').to_str()
     ltl_ast = ltl_tools.ltl_to_ba_ast(spot_form)
     ltl_switch_case = ltl_tools.pretty_print_ba_ast(ltl_ast)
 
     md = to_flat_update(md)
-    print(md)
 
-    lines = f.readlines()
-    # m = FindStateChanges()
+    lines = contract.splitlines(keepends=True)
     r = FixRets(lines)
+    parser.visit(ast, r)
     sr = SplitRets(lines, md.keys())
-    parser.visit(ast, r)
     parser.visit(ast, sr)
-    split_src = sr.instrumented()
-    lines = split_src.splitlines(keepends=True)
+    split_ret_src = sr.instrumented()
 
-    ast = parser.parse(split_src, loc=True)
-    r = FixRets(lines)
-    p = SourceInstrumentor(lines, md)
+    split_ret_lines = split_ret_src.splitlines(keepends=True)
+    ast = parser.parse(split_ret_src, loc=True)
+    r = FixRets(split_ret_lines)
     parser.visit(ast, r)
+    p = SourceInstrumentor(split_ret_lines, md)
     parser.visit(ast, p)
-    # parser.visit(ast, m)
-    # print(m.observed)
     s = p.instrumented()
-    s = s.replace("{CHECK_SWITCH_CASE}", ltl_switch_case)
 
-    with open("out.sol", "w") as fout:
-        fout.write(s)
-        # print(s)
-        pass
+    s = s.replace("{CHECK_SWITCH_CASE}", ltl_switch_case)
+    return s

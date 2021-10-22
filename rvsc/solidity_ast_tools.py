@@ -6,6 +6,18 @@ class Unimplemented(Exception):
     pass
 
 
+class CompilerVersionGetter:
+    def visitPragmaDirective(self, n: parser.Node):
+        self.compiler_version = n.value
+
+
+def get_compiler_version(contract):
+    ast = parser.parse(contract)
+    cvg = CompilerVersionGetter()
+    parser.visit(ast, cvg)
+    return cvg.compiler_version
+
+
 class SourcePrettyPrinter:
     def __init__(self, source_lines):
         self.source_lines = source_lines

@@ -127,6 +127,8 @@ class SourceInstrumentor:
     def visitFunctionDefinition(self, n: parser.Node):
         if not self.contract_name in self.updaters.keys():
             return
+        if n.isConstructor:
+            return
         sc = FindStateChanges(self.updaters[self.contract_name].keys())
         parser.visit(n, sc)
 
@@ -160,7 +162,7 @@ class SourceInstrumentor:
 
 
 INITIALIZE_CLIENT = """function initialize(address a) {
-        if (address(buchi_checker_address) != address(0)) {
+        if (address(buchi_checker_address) == address(0)) {
             buchi_checker_address = a;
         }
 }

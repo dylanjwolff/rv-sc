@@ -14,7 +14,7 @@ w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 w3.eth.default_account = w3.eth.accounts[0]
 
 ofname = "verx-benchmarks/Zilliqa/main.sol"
-ifname = "test-resources/main.sol"
+ifname = "out.sol"
 
 pp = pprint.PrettyPrinter()
 
@@ -32,37 +32,43 @@ def compile_contracts(fname):
     return contracts
 
 
+def constructZilliqaToken(contracts, instrumented=False):
+    contract = contracts["ZilliqaToken"]
+    tx_hash = contract.constructor(w3.eth.accounts[0], 100).transact()
+    tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+    constructedZ = w3.eth.contract(address=tx_receipt.contractAddress,
+                                   abi=contract.abi)
+
+    if instrumented:
+        bc_tx_receipt = constructBuchiChecker(contracts["BuchiChecker"])
+        init_hash = constructedZ.functions.initialize(
+            bc_tx_receipt.contractAddress).transact()
+        init_receipt = w3.eth.wait_for_transaction_receipt(init_hash)
+    return (constructedZ, )
+
+
+def constructBuchiChecker(contract):
+    tx_hash = contract.constructor().transact()
+    return w3.eth.wait_for_transaction_receipt(tx_hash)
+
+
 original_contracts = compile_contracts(ofname)
 instrum_contracts = compile_contracts(ifname)
 
-contract = original_contracts["ZilliqaToken"]
-oldgas = 0
-tx_hash = contract.constructor(w3.eth.accounts[1], 100).transact()
-tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-oldgas += tx_receipt["gasUsed"]
+(constructedZ, ) = constructZilliqaToken(original_contracts)
 
-constructedZ = w3.eth.contract(address=tx_receipt.contractAddress,
-                               abi=contract.abi)
-tx_hash = constructedZ.functions.transfer(w3.eth.accounts[1], 50).transact()
+oldgas = 0
+tx_hash = constructedZ.functions.burn(50).transact()
 tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 oldgas += tx_receipt["gasUsed"]
 print(f"Original used {oldgas}")
 
-gas = 0
-tx_hash = instrum_contracts["BuchiChecker"].constructor().transact()
-tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-print(tx_receipt)
+(constructedZ, ) = constructZilliqaToken(instrum_contracts, True)
 
-contract = instrum_contracts["ZilliqaToken"]
 gas = 0
-tx_hash = contract.constructor(w3.eth.accounts[1], 100,
-                               tx_receipt.contractAddress).transact()
+tx_hash = constructedZ.functions.burn(50).transact()
 tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 gas += tx_receipt["gasUsed"]
 
-constructedZ = w3.eth.contract(address=tx_receipt.contractAddress,
-                               abi=contract.abi)
-tx_hash = constructedZ.functions.transfer(w3.eth.accounts[1], 50).transact()
-tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-gas += tx_receipt["gasUsed"]
 print(f"{gas-oldgas} more gas used")

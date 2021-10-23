@@ -14,11 +14,22 @@ RUN rm -rf spot-2.9.8
 RUN rm spot.tar.gz
 RUN ldconfig
 RUN cp -r /usr/local/lib/python3.8/site-packages/spot .
+COPY verx-benchmarks/ verx-benchmarks
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update
+RUN apt install -y software-properties-common
+RUN add-apt-repository -y ppa:ethereum/ethereum
+RUN apt update
+RUN apt install -y ethereum
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-COPY rvsc/ rvsc
+
 COPY test/ test
+COPY rvsc/ rvsc
+COPY specs/ specs
+COPY config/ config
 
 RUN pytest
 

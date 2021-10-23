@@ -11,7 +11,7 @@ class V:
     def visitBinaryOperation(self, n: parser.Node):
         if n.operator == '=':
             pass
-            # pprint.pprint(n.left)
+            pprint.pprint(n.left)
 
 
 ast = parser.parse_file(sys.argv[1])

@@ -1,0 +1,10 @@
+{
+        0: {
+                "triggers": ["ZilliqaToken.FUNCTION"],
+                "condition": "FUNCTION == transfer"
+        },
+        1: {
+                "triggers": ["ZilliqaToken.FUNCTION"],
+                "condition": "address != 0x0"
+        }
+}

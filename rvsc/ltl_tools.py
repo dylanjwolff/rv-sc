@@ -39,7 +39,7 @@ leparser = Lark(r"""
     %import common.WS
     %ignore WS
     """,
-                start='body')
+                start="body")
 
 
 class Edge:
@@ -72,6 +72,10 @@ class MyTransformer(Transformer):
         return Edge(cond, dest, accsig)
 
 
+class Unreachable(Exception):
+    pass
+
+
 def ltl_to_ba_ast(ltl_str):
     body_str = ltl_str.split("--BODY--")[-1].split("--END--")[0]
 
@@ -86,14 +90,14 @@ def pretty_print_ba_exp(e: lark.Tree):
     s = ""
     if e.data == "bool":
         (b, ) = e.children
-        s += "TRUE" if b == "t" else "FALSE"
+        s += "true" if b == "t" else "false"
         return s
     elif e.data == "var":
         (n, ) = e.children
-        s += f"v{n}"
+        s += f"vars[{n}]"
         return s
     elif e.data == "not":
-        s += f'!{pretty_print_ba_exp(e.children[0])}'
+        s += f"!{pretty_print_ba_exp(e.children[0])}"
         return s
     elif e.data == "paren":
         mid = pretty_print_ba_exp(e.children[0])
@@ -102,24 +106,31 @@ def pretty_print_ba_exp(e: lark.Tree):
     elif e.data == "and":
         left = pretty_print_ba_exp(e.children[0])
         right = pretty_print_ba_exp(e.children[1])
-        s += f"{left} and {right}"
+        s += f"{left} && {right}"
         return s
     elif e.data == "or":
         left = pretty_print_ba_exp(e.children[0])
         right = pretty_print_ba_exp(e.children[1])
-        s += f"{left} or {right}"
+        s += f"{left} || {right}"
         return s
     else:
-        raise ValueError("switch case exhausted")
+        raise Unreachable("Switch case exhausted!")
 
 
 def pretty_print_ba_ast(ba_ast):
     pretty_s = ""
     for state in ba_ast:
-        pretty_s += f"\nif state == {state[0].children[0]}:"
+        pretty_s += f"\nif (state == {state[0].children[0]}) {{"
         for edge in state[1]:
+            if edge.cond == None:
+                raise ValueError("No edge condition!")
+            if edge == state[1][0]:
+                pretty_s += f"\n\tif ({pretty_print_ba_exp(edge.cond[0])}) {{"
+            else:
+                pretty_s += f"\n\t}} else if ({pretty_print_ba_exp(edge.cond[0])}) {{"
+            pretty_s += f"\n\t\tstate = {edge.dest.children[0]};"
             if edge.cond != None:
-                pretty_s += f'\n\tif {pretty_print_ba_exp(edge.cond[0])}:'
-            pretty_s += f"\n\t\tstate = {edge.dest.children[0]}"
+                pretty_s += f"\n\t}} else {{\n\t\trevert();\n\t}}"
+        pretty_s += "\n}"
 
     return pretty_s

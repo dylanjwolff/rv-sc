@@ -2,3 +2,4 @@ venv
 tags
 .vscode
 __pycache__
+*.abi

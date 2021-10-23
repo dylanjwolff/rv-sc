@@ -16,15 +16,20 @@ RUN ldconfig
 RUN cp -r /usr/local/lib/python3.8/site-packages/spot .
 COPY verx-benchmarks/ verx-benchmarks
 
-RUN yes | apt install wget
-COPY rvsc/solc_vm.py rvsc/solc_vm.py
-COPY config/ config
-RUN python3 rvsc/solc_vm.py -M v0.4.0
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update
+RUN apt install -y software-properties-common
+RUN add-apt-repository -y ppa:ethereum/ethereum
+RUN apt update
+RUN apt install -y ethereum
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
+
 COPY test/ test
 COPY rvsc/ rvsc
+COPY specs/ specs
+COPY config/ config
 
 RUN pytest
 

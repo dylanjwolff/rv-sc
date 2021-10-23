@@ -8,6 +8,8 @@ from solcx import install_solc
 
 # Note the static binaries are Linux only, so OK to assume /'s for paths
 INSTALL_DIR = os.path.expanduser("~/.solcx")
+SOLC_VERSIONS = open(
+    os.path.expanduser("config/solc-versions.txt")).readlines()
 
 
 def vtuple(v):
@@ -29,7 +31,12 @@ class Solc:
         else:
             self.version = v
             self.use_mm = use_mm
-        self.mm = self.find_major_match(available())
+        local = self.find_major_match(available())
+        remote = self.find_major_match(SOLC_VERSIONS)
+        if not self.can_nonbreaking_upgrade_by(local):
+            self.mm = remote
+        else:
+            self.mm = local
 
     def can_nonbreaking_upgrade_by(self, v):
         bytuple = vtuple(v)

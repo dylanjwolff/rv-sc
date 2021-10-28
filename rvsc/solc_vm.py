@@ -22,7 +22,8 @@ def major(v):
 
 
 class Solc:
-    def __init__(self, v: str, use_mm=False):
+    def __init__(self, v: str, use_mm=False, force_exact=False):
+        assert not (force_exact and use_mm)
         v = v.strip()
         assert v[0].isdigit() or v[0] == '^'
         if v[0] == "^":
@@ -37,6 +38,9 @@ class Solc:
             self.mm = remote
         else:
             self.mm = local
+
+        if force_exact:
+            self.use_mm = False
 
     def can_nonbreaking_upgrade_by(self, v):
         bytuple = vtuple(v)

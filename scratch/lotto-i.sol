@@ -45,13 +45,15 @@ contract TestLotto is Lotto {
 
 
   function echidna_balance_under_1000() public view returns(bool){
-       return !payedOut;
+       BuchiChecker bc = BuchiChecker(buchi_checker_address);
+       return !bc.invalid();
   }
 }
 
 
 
 contract BuchiChecker {
+        bool public invalid = false;
         uint256 state;
         uint32[] updates_k;
         bool[] updates_v;
@@ -88,7 +90,7 @@ if (state == 0) {
 	if (vars[0]) {
 		state = 0;
 	} else {
-		revert();
+		invalid = true;
 	}
 } 
         }

@@ -16,4 +16,11 @@ We need instrumentation to
 
 Inheritance is another potential issue. How do we instrument parent conctract methods that are invoked with "super"
 
+nested calls might not work... foo( ... ) { bar() } 
+	need a call stack in instrumented contract, only check if callstack is empty
+
+concurrent calls also problem
+	no, this is fine because the whole execution is transactional
+
+frame as test-time instrumentation
     

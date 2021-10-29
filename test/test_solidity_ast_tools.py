@@ -6,6 +6,16 @@ import pytest
 from pathlib import Path
 
 
+def test_typer(snapshot):
+    fname = "verx-benchmarks/Zilliqa/main.sol"
+    ast = parser.parse_file(fname, loc=True)
+
+    t = solidity_ast_tools.StateVarTyper()
+    parser.visit(ast, t)
+
+    snapshot.assert_match(t.mapping)
+
+
 # @TODO make sure relative pathing is done Pythonically
 @pytest.mark.skip(
     reason="Too many edge cases to resolve with whole Solidity language")

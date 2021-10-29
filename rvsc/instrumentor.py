@@ -98,19 +98,27 @@ def create_ctx(loc):
 
 class SourceInstrumentor:
     def __init__(
-        self,
-        source_lines,
-        updaters={
-            "ZilliqaToken": {
-                "balances": [(0, "balances==TURKEY")],
-                "owner": [(1, "owner==CHICKEN")],
-                "FUNCTION": [(2, 'FUNCTION == "transfer"')]
-            }
-        }):
+            self,
+            source_lines,
+            updaters={
+                "ZilliqaToken": {
+                    "balances": [(0, "balances==TURKEY")],
+                    "owner": [(1, "owner==CHICKEN")],
+                    "FUNCTION": [(2, 'FUNCTION == "transfer"')]
+                }
+            },
+            prevs={"ZilliqaToken": {
+                "x": "prev__x"
+            }},
+            state_var_types={"ZilliqaToken": {
+                "x": "uint32"
+            }}):
         self.updaters = updaters
         self.source_lines = [[l] for l in source_lines]
         self.source_lines[-1].extend(pprint_checker())
         self.contract_name = None
+        self.prevs = prevs
+        self.state_var_types = state_var_types
 
     def visitContractDefinition(self, n: parser.Node):
         self.contract_name = n.name
@@ -121,10 +129,18 @@ class SourceInstrumentor:
         first = n.subNodes[0].loc["start"]["line"] - 1
         self.source_lines[first] = ["address buchi_checker_address;\n"
                                     ] + self.source_lines[first]
+        prev_inits = [
+            f"{self.state_var_types[self.contract_name][var]} {prev};\n"
+            for var, prev in self.prevs[self.contract_name]
+        ]
+        self.source_lines[first].extend(prev_inits)
+
         last = n.subNodes[-1].loc["end"]["line"] - 1
         self.source_lines[last].extend(INITIALIZE_CLIENT)
 
     def visitFunctionDefinition(self, n: parser.Node):
+        updated = []
+
         if not self.contract_name in self.updaters.keys():
             return
         if n.isConstructor:
@@ -141,6 +157,7 @@ class SourceInstrumentor:
 
         for line, val in sc.observed.items():
             for update in self.updaters[self.contract_name][val]:
+                updated.append(val)
                 self.source_lines[line].extend(pprint_update(update))
 
         if len(n.body) > 0:
@@ -150,6 +167,10 @@ class SourceInstrumentor:
                                                ] + self.source_lines[line]
                 else:
                     self.source_lines[line].append(FOOTER)
+
+        for var in updated:
+            self.source_lines[first_line(n) - 1].extend(
+                f"{self.prevs[self.contract_name][var]} = {var};\n")
 
     def instrumented(self):
         s = ""
@@ -276,6 +297,15 @@ def to_flat_update(md_json):
     return mc
 
 
+def get_prevs(md_json):
+    mc = defaultdict(lambda: defaultdict(lambda: [], {}), {})
+    for i, var in enumerate(md_json):
+        for k in var["triggers"]:
+            contract, trigger = k.split(".")
+            mc[contract][trigger] += [(i, var["condition"])]
+    return mc
+
+
 def pprint_update(u, fn_name=None):
     s = f"bc.update({u[0]}, ({u[1]}));\n"
     # s = s.replace("SUM", "bc.sum")
@@ -304,6 +334,9 @@ def instrument(md, spec, contract, for_fuzzer=False):
     md = to_flat_update(md)
 
     lines = contract.splitlines(keepends=True)
+    typer = solidity_ast_tools.StateVarTyper()
+    parser.visit(ast, typer)
+
     r = FixRets(lines)
     parser.visit(ast, r)
     sr = SplitRets(lines, md.keys())

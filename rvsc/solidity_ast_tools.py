@@ -18,6 +18,21 @@ def get_compiler_version(contract):
     return cvg.compiler_version
 
 
+class StateVarTyper:
+    def __init__(self):
+        self.mapping = {}
+
+    def visitContractDefinition(self, n: parser.Node):
+        self.current = n.name
+        self.mapping[n.name] = {"msg.sender": "address"}
+
+    def visitStateVariableDeclaration(self, n: parser.Node):
+        for c in n.variables:
+            spp = SourcePrettyPrinter([])
+            spp.visit(c.typeName)
+            self.mapping[self.current][c.name] = spp.out_s
+
+
 class SourcePrettyPrinter:
     def __init__(self, source_lines):
         self.source_lines = source_lines

@@ -178,6 +178,7 @@ def pprint_checker():
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
+        bool invalid = false;
 
         constructor() {
                 state = 0;
@@ -287,12 +288,18 @@ def pprint_update(u, fn_name=None):
     return s
 
 
-def instrument(md, spec, contract):
+def instrument(md, spec, contract, for_fuzzer=False):
     ast = parser.parse(contract, loc=True)
     spot_form = spot \
         .translate(spec, 'monitor', 'det').to_str()
+
     ltl_ast = ltl_tools.ltl_to_ba_ast(spot_form)
-    ltl_switch_case = ltl_tools.pretty_print_ba_ast(ltl_ast)
+
+    if for_fuzzer:
+        ltl_switch_case = ltl_tools.pretty_print_ba_ast(
+            ltl_ast, failure_case="invalid = true;\n")
+    else:
+        ltl_switch_case = ltl_tools.pretty_print_ba_ast(ltl_ast)
 
     md = to_flat_update(md)
 

@@ -51,7 +51,7 @@ def test_smoke_e2e_Zilliqa(geth_ethnode):
         spec = fs.read()
         contract = f.read()
 
-        s = instrumentor.instrument(md, spec, contract)
+        s = instrumentor.instrument(md, spec, contract, for_fuzzer=True)
         ftemp.write(s)
         ifname = ftemp.name
 

@@ -117,7 +117,7 @@ def pretty_print_ba_exp(e: lark.Tree):
         raise Unreachable("Switch case exhausted!")
 
 
-def pretty_print_ba_ast(ba_ast):
+def pretty_print_ba_ast(ba_ast, failure_case='revert("Invalid Buchi State");'):
     pretty_s = ""
     for state in ba_ast:
         pretty_s += f"\nif (state == {state[0].children[0]}) {{"
@@ -130,7 +130,7 @@ def pretty_print_ba_ast(ba_ast):
                 pretty_s += f"\n\t}} else if ({pretty_print_ba_exp(edge.cond[0])}) {{"
             pretty_s += f"\n\t\tstate = {edge.dest.children[0]};"
             if edge.cond != None:
-                pretty_s += f"\n\t}} else {{\n\t\trevert();\n\t}}"
+                pretty_s += f"\n\t}} else {{\n\t\t{failure_case}\n\t}}"
         pretty_s += "\n}"
 
     return pretty_s

@@ -38,6 +38,7 @@ parser.add_argument('-o',
                     nargs=1,
                     help='output file',
                     default=["out.sol"])
+parser.add_argument('-f', '--for-fuzzer', action='store_true')
 
 args = parser.parse_args()
 print(args)
@@ -51,5 +52,5 @@ with open(args.infile[0]) as f, \
     spec = fs.read()
     contract = f.read()
 
-    s = instrumentor.instrument(md, spec, contract)
+    s = instrumentor.instrument(md, spec, contract, for_fuzzer=args.for_fuzzer)
     fo.write(s)

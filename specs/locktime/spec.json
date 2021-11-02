@@ -1,0 +1,19 @@
+[
+	{
+		"name": "v0",
+		"triggers": [
+			"TimeLock.FUNCTION"
+		],
+		"condition": "FUNCTION == \"increaseLockTime\""
+	},
+	{
+		"name": "v1",
+		"triggers": [
+			"TimeLock.lockTime"
+		],
+		"condition": "lockTime[msg.sender] >= prev(lockTime[msg.sender])",
+		"types": {
+			"TimeLock.lockTime[msg.sender]": "uint"
+		}
+	}
+]

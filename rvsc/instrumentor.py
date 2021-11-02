@@ -313,7 +313,7 @@ class FindStateChanges:
         self.observables = observables
 
     def visitBinaryOperation(self, n: parser.Node):
-        if n.operator == '=':
+        if n.operator in ["=", "+=", "-="]:
             if n.left.type == "Identifier":
                 if n.left.name in self.observables:
                     self.observed[n.loc["end"]["line"] - 1] = n.left.name

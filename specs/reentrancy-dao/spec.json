@@ -1,0 +1,19 @@
+[
+	{
+		"name": "v0",
+		"triggers": [
+			"ReentrancyDAO.FUNCTION"
+		],
+		"condition": "FUNCTION == \"withdrawAll\""
+	},
+	{
+		"name": "v1",
+		"triggers": [
+			"ReentrancyDAO.FUNCTION_END"
+		],
+		"condition": "balance == prev(balance) - prev(credit[msg.sender])",
+		"types": {
+			"ReentrancyDAO.credit[msg.sender]": "uint"
+		}
+	}
+]

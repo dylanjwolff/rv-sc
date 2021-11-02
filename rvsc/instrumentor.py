@@ -189,13 +189,20 @@ class SourceInstrumentor:
                 updated.append(val)
                 self.source_lines[line].extend(pprint_update(update))
 
+        end_updaters = self.updaters[self.contract_name]["FUNCTION_END"]
+        end_updates = [pprint_update(ud) for ud in end_updaters]
+        if len(end_updates) > 0:
+            updated.append("FUNCTION_END")
+
+        end_updates.append(FOOTER)
+
         if len(n.body) > 0:
             for line, is_ret in fn_exits(n):
                 if is_ret:
-                    self.source_lines[line] = [FOOTER
-                                               ] + self.source_lines[line]
+                    self.source_lines[
+                        line] = end_updates + self.source_lines[line]
                 else:
-                    self.source_lines[line].append(FOOTER)
+                    self.source_lines[line].extend(end_updates)
 
         for trigger in updated:
             if trigger in self.prevs[self.contract_name].keys():
@@ -340,14 +347,15 @@ def to_flat_update(md_json, var_mapping):
                 condition = condition.split("==")[1].strip()
 
             for p in prevs:
-                condition = re.sub(r'prev\([^)]+\)', get_prevname(p),
-                                   condition)
+                condition = re.sub(r'prev\([^)]+\)',
+                                   get_prevname(p),
+                                   condition,
+                                   count=1)
 
             if "types" in var:
                 for k, type in var["types"].items():
                     contract, val = k.split(".", maxsplit=1)
                     mt[contract][get_prevname(val)] = type
-
             mc[contract][trigger] += [(var_mapping[var["name"]], condition)]
     return (mc, mp, mt)
 

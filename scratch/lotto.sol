@@ -3,7 +3,7 @@
  contract Lotto {
      bool public payedOut = false;
      address public winner;
-     uint public winAmount;
+     uint public winAmount = 10;
 
      // ... extra functionality here
 
@@ -22,10 +22,3 @@
 	}
      }
  }
-
-contract TestLotto is Lotto {
-
-  function echidna_balance_under_1000() public view returns(bool){
-       return !payedOut;
-  }
-}

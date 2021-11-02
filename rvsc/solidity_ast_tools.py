@@ -24,7 +24,10 @@ class StateVarTyper:
 
     def visitContractDefinition(self, n: parser.Node):
         self.current = n.name
-        self.mapping[n.name] = {"msg.sender": "address"}
+        self.mapping[n.name] = {
+            "msg.sender": "address",
+            "this.balance": "uint256"
+        }
 
     def visitStateVariableDeclaration(self, n: parser.Node):
         for c in n.variables:

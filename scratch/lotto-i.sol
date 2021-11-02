@@ -3,24 +3,28 @@
  contract Lotto {
 address buchi_checker_address;
      bool public payedOut = false;
+uint256 prev___this_balance;
      address public winner;
-     uint public winAmount;
+     uint public winAmount = 1;
 
      // ... extra functionality here
 
      function sendToWinner() public {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+bc.update(0, true); // FUNCTION == "sendToWinner" 
+prev___this_balance = this.balance;
          require(!payedOut);
          // <yes> <report> UNCHECKED_LL_CALLS
-         winner.send(winAmount);
+         winner.transfer(winAmount);
          payedOut = true;
-bc.update(0, (payedOut == false));
+bc.update(1, (this.balance == prev___this_balance - winAmount));
 bc.apply_updates();
 bc.check();
      }
 
      function withdrawLeftOver(uint256 i) public {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+bc.update(0, false); // FUNCTION == "sendToWinner" 
          require(payedOut);
          // <yes> <report> UNCHECKED_LL_CALLS
 	if (i < 100) {
@@ -36,28 +40,14 @@ function initialize(address a) {
 }
      }
 
-contract TestLotto is Lotto {
-
-	constructor() payable {
-		BuchiChecker bc = new BuchiChecker();
-		buchi_checker_address =	 address(bc);
-	}
-
-
-  function echidna_balance_under_1000() public view returns(bool){
-       BuchiChecker bc = BuchiChecker(buchi_checker_address);
-       return !bc.invalid();
-  }
-}
-
 
 
 contract BuchiChecker {
-        bool public invalid = false;
         uint256 state;
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
+        bool public invalid = false;
 
         constructor() {
                 state = 0;
@@ -87,12 +77,27 @@ contract BuchiChecker {
         function check() {
                
 if (state == 0) {
-	if (vars[0]) {
+	if (!vars[0] || vars[1]) {
 		state = 0;
 	} else {
 		invalid = true;
+
 	}
 } 
         }
 }
-    
+
+contract TestLotto is Lotto {
+
+	constructor() payable {
+		BuchiChecker bc = new BuchiChecker();
+		buchi_checker_address =	 address(bc);
+        winner = msg.sender;
+	}
+
+
+  function echidna_balance_under_1000() public view returns(bool){
+       BuchiChecker bc = BuchiChecker(buchi_checker_address);
+       return !bc.invalid();
+  }
+}

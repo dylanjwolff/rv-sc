@@ -5,6 +5,7 @@ import json
 from . import ltl_tools
 import spot
 from . import solidity_ast_tools
+import re
 
 
 class Unimplemented(Exception):
@@ -96,6 +97,11 @@ def create_ctx(loc):
     ctx.start.line
 
 
+def get_prevname(var: str):
+    var = var.replace(".", "_")
+    return f"prev___{var}"
+
+
 class SourceInstrumentor:
     def __init__(
             self,
@@ -108,7 +114,7 @@ class SourceInstrumentor:
                 }
             },
             prevs={"ZilliqaToken": {
-                "x": "prev__x"
+                "x": {"x"}
             }},
             state_var_types={"ZilliqaToken": {
                 "x": "uint32"
@@ -129,11 +135,13 @@ class SourceInstrumentor:
         first = n.subNodes[0].loc["start"]["line"] - 1
         self.source_lines[first] = ["address buchi_checker_address;\n"
                                     ] + self.source_lines[first]
-        prev_inits = [
-            f"{self.state_var_types[self.contract_name][var]} {prev};\n"
-            for var, prev in self.prevs[self.contract_name]
-        ]
-        self.source_lines[first].extend(prev_inits)
+
+        for _, prevs in self.prevs[self.contract_name].items():
+            prev_inits = [
+                f"{self.state_var_types[self.contract_name][var]} {get_prevname(var)};\n"
+                for var in prevs
+            ]
+            self.source_lines[first].extend(prev_inits)
 
         last = n.subNodes[-1].loc["end"]["line"] - 1
         self.source_lines[last].extend(INITIALIZE_CLIENT)
@@ -151,9 +159,18 @@ class SourceInstrumentor:
         fn_name = get_fn_name(n)
         if len(n.body) > 0:
             self.source_lines[first_line(n) - 1].extend(HEADER)
+            for update in self.updaters[self.contract_name]["msg.sender"]:
+                self.source_lines[first_line(n) - 1].extend(
+                    pprint_update(update))
             for update in self.updaters[self.contract_name]["FUNCTION"]:
                 self.source_lines[first_line(n) - 1].extend(
                     pprint_update(update, fn_name))
+
+        for arg in n.parameters.parameters:
+            for update in self.updaters[self.contract_name][arg.name]:
+                updated.append(arg.name)
+                self.source_lines[first_line(n) - 1].extend(
+                    pprint_update(update))
 
         for line, val in sc.observed.items():
             for update in self.updaters[self.contract_name][val]:
@@ -168,9 +185,13 @@ class SourceInstrumentor:
                 else:
                     self.source_lines[line].append(FOOTER)
 
-        for var in updated:
-            self.source_lines[first_line(n) - 1].extend(
-                f"{self.prevs[self.contract_name][var]} = {var};\n")
+        for trigger in updated:
+            if trigger in self.prevs[self.contract_name].keys():
+                prev_inits = [
+                    f"{get_prevname(var)} = {var};\n"
+                    for var in self.prevs[self.contract_name][trigger]
+                ]
+                self.source_lines[first_line(n) - 1].extend(prev_inits)
 
     def instrumented(self):
         s = ""
@@ -199,7 +220,7 @@ def pprint_checker():
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
-        bool invalid = false;
+        bool public invalid = false;
 
         constructor() {
                 state = 0;
@@ -289,21 +310,27 @@ class FindStateChanges:
 
 
 def to_flat_update(md_json):
+    mp = defaultdict(lambda: defaultdict(lambda: set([]), {}), {})
     mc = defaultdict(lambda: defaultdict(lambda: [], {}), {})
     for i, var in enumerate(md_json):
         for k in var["triggers"]:
-            contract, trigger = k.split(".")
-            mc[contract][trigger] += [(i, var["condition"])]
-    return mc
+            condition = var["condition"]
+            contract, trigger = k.split(".", maxsplit=1)
 
+            prevs = re.findall(r'prev\([^)]+\)', condition)
+            prevs = [p[5:-1].strip() for p in prevs]
+            mp[contract][trigger].update(prevs)
 
-def get_prevs(md_json):
-    mc = defaultdict(lambda: defaultdict(lambda: [], {}), {})
-    for i, var in enumerate(md_json):
-        for k in var["triggers"]:
-            contract, trigger = k.split(".")
-            mc[contract][trigger] += [(i, var["condition"])]
-    return mc
+            if "FUNCTION" in condition:
+                # @TODO add some checks here
+                condition = condition.split("==")[1].strip()
+
+            for p in prevs:
+                condition = re.sub(r'prev\([^)]+\)', get_prevname(p),
+                                   condition)
+
+            mc[contract][trigger] += [(i, condition)]
+    return (mc, mp)
 
 
 def pprint_update(u, fn_name=None):
@@ -312,8 +339,12 @@ def pprint_update(u, fn_name=None):
     if "SUM" in s:
         s = f"bc.update({u[0]}, (true));\n"
 
+    print(u)
     if fn_name:
-        s = s.replace("FUNCTION", fn_name)
+        if fn_name == u[1]:
+            s = f"bc.update({u[0]}, true); // FUNCTION == {u[1]} \n"
+        else:
+            s = f"bc.update({u[0]}, false); // FUNCTION == {u[1]} \n"
 
     return s
 
@@ -331,7 +362,7 @@ def instrument(md, spec, contract, for_fuzzer=False):
     else:
         ltl_switch_case = ltl_tools.pretty_print_ba_ast(ltl_ast)
 
-    md = to_flat_update(md)
+    md, prevs = to_flat_update(md)
 
     lines = contract.splitlines(keepends=True)
     typer = solidity_ast_tools.StateVarTyper()
@@ -347,7 +378,10 @@ def instrument(md, spec, contract, for_fuzzer=False):
     ast = parser.parse(split_ret_src, loc=True)
     r = FixRets(split_ret_lines)
     parser.visit(ast, r)
-    p = SourceInstrumentor(split_ret_lines, md)
+    p = SourceInstrumentor(split_ret_lines,
+                           md,
+                           prevs=prevs,
+                           state_var_types=typer.mapping)
     parser.visit(ast, p)
     s = p.instrumented()
 

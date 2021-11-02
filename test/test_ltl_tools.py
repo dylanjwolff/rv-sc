@@ -15,3 +15,10 @@ def test_smoke_ast_pretty(snapshot):
     s = ltl_tools.pretty_print_ba_ast(ast)
 
     snapshot.assert_match(s)
+
+
+def test_impl(snapshot):
+    g: str = spot.translate('G( ( !v0 & v1 ) => v2 )', 'monitor',
+                            'det').to_str()
+    s = ltl_tools.var_mapping(g)
+    snapshot.assert_match(s)

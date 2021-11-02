@@ -1,17 +1,20 @@
 [
         {
+                "name": "v0",
                 "triggers": [
                         "MultiOwnable.msg.sender"
                 ],
                 "condition": "prev(owners)[msg.sender] == 0"
         },
         {
+                "name": "v1",
                 "triggers": [
                         "MultiOwnable.FUNCTION"
                 ],
                 "condition": "FUNCTION == \"newOwner\""
         },
         {
+                "name": "v2",
                 "triggers": [
                         "MultiOwnable.owners"
                 ],

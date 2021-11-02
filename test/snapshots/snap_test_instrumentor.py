@@ -7,20 +7,21 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
-snapshots['test_md_reader 1'] = (
-    {
-        'Z': {
-            'x': [
-                (
-                    0,
-                    'prev(y) == x'
-                )
-            ]
-        }
-    },
-    {
-        'Z': set([
+snapshots['test_md_reader_currs 1'] = {
+    'Z': {
+        'x': [
+            (
+                0,
+                'prev___y == x'
+            )
+        ]
+    }
+}
+
+snapshots['test_md_reader_prevs 1'] = {
+    'Z': {
+        'x': set([
             'y'
         ])
     }
-)
+}

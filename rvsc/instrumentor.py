@@ -309,10 +309,10 @@ class FindStateChanges:
                 raise Unimplemented("Unknown Assignment LHS")
 
 
-def to_flat_update(md_json):
+def to_flat_update(md_json, var_mapping):
     mp = defaultdict(lambda: defaultdict(lambda: set([]), {}), {})
     mc = defaultdict(lambda: defaultdict(lambda: [], {}), {})
-    for i, var in enumerate(md_json):
+    for var in md_json:
         for k in var["triggers"]:
             condition = var["condition"]
             contract, trigger = k.split(".", maxsplit=1)
@@ -329,7 +329,7 @@ def to_flat_update(md_json):
                 condition = re.sub(r'prev\([^)]+\)', get_prevname(p),
                                    condition)
 
-            mc[contract][trigger] += [(i, condition)]
+            mc[contract][trigger] += [(var_mapping[var["name"]], condition)]
     return (mc, mp)
 
 
@@ -355,6 +355,7 @@ def instrument(md, spec, contract, for_fuzzer=False):
         .translate(spec, 'monitor', 'det').to_str()
 
     ltl_ast = ltl_tools.ltl_to_ba_ast(spot_form)
+    var_mapping = ltl_tools.var_mapping(spot_form)
 
     if for_fuzzer:
         ltl_switch_case = ltl_tools.pretty_print_ba_ast(
@@ -362,7 +363,7 @@ def instrument(md, spec, contract, for_fuzzer=False):
     else:
         ltl_switch_case = ltl_tools.pretty_print_ba_ast(ltl_ast)
 
-    md, prevs = to_flat_update(md)
+    md, prevs = to_flat_update(md, var_mapping)
 
     lines = contract.splitlines(keepends=True)
     typer = solidity_ast_tools.StateVarTyper()

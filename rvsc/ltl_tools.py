@@ -86,6 +86,16 @@ def ltl_to_ba_ast(ltl_str):
     return tformed
 
 
+def var_mapping(ltl_str):
+    ap = ltl_str.split("AP:")[1].split("\n", 1)[0]
+    ap = ap.replace('"', '')
+    vars = ap.split()[1:]
+    mapping = {}
+    for ind, var in enumerate(vars):
+        mapping[var] = ind
+    return mapping
+
+
 def pretty_print_ba_exp(e: lark.Tree):
     s = ""
     if e.data == "bool":
@@ -117,7 +127,10 @@ def pretty_print_ba_exp(e: lark.Tree):
         raise Unreachable("Switch case exhausted!")
 
 
-def pretty_print_ba_ast(ba_ast, failure_case='revert("Invalid Buchi State");'):
+def pretty_print_ba_ast(
+    ba_ast,
+    failure_case='revert("Invalid Buchi State");',
+):
     pretty_s = ""
     for state in ba_ast:
         pretty_s += f"\nif (state == {state[0].children[0]}) {{"

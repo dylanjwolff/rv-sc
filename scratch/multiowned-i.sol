@@ -39,11 +39,11 @@ mapping (address=>address) prev___owners;
   // <yes> <report> ACCESS_CONTROL
   function newOwner(address _owner) external returns (bool) {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
-bc.update(0, (prev___owners[msg.sender] == 0));
-bc.update(1, true); // FUNCTION == "newOwner" 
+bc.update(2, (prev___owners[msg.sender] == 0));
+bc.update(0, true); // FUNCTION == "newOwner" 
     require(_owner != 0);
     owners[_owner] = msg.sender;
-bc.update(2, (owners[_owner] == 0));
+bc.update(1, (owners[_owner] == 0));
 bool temp_ret_instrum_0 = true;
 bc.apply_updates();
 bc.check();
@@ -55,11 +55,11 @@ return temp_ret_instrum_0;
     */
   function deleteOwner(address _owner) onlyOwner external returns (bool) {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
-bc.update(0, (prev___owners[msg.sender] == 0));
-bc.update(1, false); // FUNCTION == "newOwner" 
+bc.update(2, (prev___owners[msg.sender] == 0));
+bc.update(0, false); // FUNCTION == "newOwner" 
     require(owners[_owner] == msg.sender || (owners[_owner] != 0 && msg.sender == root));
     owners[_owner] = 0;
-bc.update(2, (owners[_owner] == 0));
+bc.update(1, (owners[_owner] == 0));
 bool temp_ret_instrum_0 = true;
 bc.apply_updates();
 bc.check();
@@ -111,7 +111,7 @@ contract BuchiChecker {
         function check() {
                
 if (state == 0) {
-	if (!vars[0] || vars[1] || vars[2]) {
+	if (!vars[0] || vars[1] || !vars[2]) {
 		state = 0;
 	} else {
 		invalid = true;

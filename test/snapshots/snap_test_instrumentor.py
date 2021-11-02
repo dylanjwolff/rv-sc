@@ -25,3 +25,9 @@ snapshots['test_md_reader_prevs 1'] = {
         ])
     }
 }
+
+snapshots['test_md_reader_types 1'] = {
+    'Z': {
+        'prev___y': 'uint32'
+    }
+}

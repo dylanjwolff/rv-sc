@@ -12,7 +12,7 @@ pragma solidity ^0.4.23;
 contract MultiOwnable {
 address buchi_checker_address;
   address public root;
-mapping (address=>address) prev___owners;
+address prev___owners_msg_sender_;
   mapping (address => address) public owners; // owner => parent of owner
 
   /**
@@ -39,7 +39,8 @@ mapping (address=>address) prev___owners;
   // <yes> <report> ACCESS_CONTROL
   function newOwner(address _owner) external returns (bool) {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
-bc.update(2, (prev___owners[msg.sender] == 0));
+prev___owners_msg_sender_ = owners[msg.sender];
+bc.update(2, (prev___owners_msg_sender_ == 0));
 bc.update(0, true); // FUNCTION == "newOwner" 
     require(_owner != 0);
     owners[_owner] = msg.sender;
@@ -55,7 +56,8 @@ return temp_ret_instrum_0;
     */
   function deleteOwner(address _owner) onlyOwner external returns (bool) {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
-bc.update(2, (prev___owners[msg.sender] == 0));
+prev___owners_msg_sender_ = owners[msg.sender];
+bc.update(2, (prev___owners_msg_sender_ == 0));
 bc.update(0, false); // FUNCTION == "newOwner" 
     require(owners[_owner] == msg.sender || (owners[_owner] != 0 && msg.sender == root));
     owners[_owner] = 0;
@@ -123,6 +125,11 @@ if (state == 0) {
     
 
 contract TestMultiOwnable is MultiOwnable {
+	
+	constructor() payable {
+		BuchiChecker bc = new BuchiChecker();
+		buchi_checker_address =	 address(bc);
+	}
 
   function echidna_test_buchi() returns (bool) {
     BuchiChecker bc = BuchiChecker(buchi_checker_address);

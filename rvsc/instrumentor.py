@@ -99,6 +99,10 @@ def create_ctx(loc):
 
 def get_prevname(var: str):
     var = var.replace(".", "_")
+    var = var.replace("]", "_")
+    var = var.replace("[", "_")
+    var = var.replace(")", "_")
+    var = var.replace("(", "_")
     return f"prev___{var}"
 
 
@@ -136,12 +140,18 @@ class SourceInstrumentor:
         self.source_lines[first] = ["address buchi_checker_address;\n"
                                     ] + self.source_lines[first]
 
+        contract_types = self.state_var_types[self.contract_name]
         for _, prevs in self.prevs[self.contract_name].items():
-            prev_inits = [
-                f"{self.state_var_types[self.contract_name][var]} {get_prevname(var)};\n"
-                for var in prevs
-            ]
-            self.source_lines[first].extend(prev_inits)
+            prev_decls = []
+            for var in prevs:
+                if get_prevname(var) in contract_types:
+                    prev_type = contract_types[get_prevname(var)]
+                else:
+                    print(contract_types)
+                    prev_type = contract_types[var]
+
+                prev_decls.extend(f"{prev_type} {get_prevname(var)};\n")
+            self.source_lines[first].extend(prev_decls)
 
         last = n.subNodes[-1].loc["end"]["line"] - 1
         self.source_lines[last].extend(INITIALIZE_CLIENT)
@@ -159,12 +169,14 @@ class SourceInstrumentor:
         fn_name = get_fn_name(n)
         if len(n.body) > 0:
             self.source_lines[first_line(n) - 1].extend(HEADER)
+
+            first_instrumentations = []
             for update in self.updaters[self.contract_name]["msg.sender"]:
-                self.source_lines[first_line(n) - 1].extend(
-                    pprint_update(update))
+                updated.append("msg.sender")
+                first_instrumentations.extend(pprint_update(update))
             for update in self.updaters[self.contract_name]["FUNCTION"]:
-                self.source_lines[first_line(n) - 1].extend(
-                    pprint_update(update, fn_name))
+                updated.append("FUNCTION")
+                first_instrumentations.extend(pprint_update(update, fn_name))
 
         for arg in n.parameters.parameters:
             for update in self.updaters[self.contract_name][arg.name]:
@@ -192,6 +204,7 @@ class SourceInstrumentor:
                     for var in self.prevs[self.contract_name][trigger]
                 ]
                 self.source_lines[first_line(n) - 1].extend(prev_inits)
+        self.source_lines[first_line(n) - 1].extend(first_instrumentations)
 
     def instrumented(self):
         s = ""
@@ -312,6 +325,7 @@ class FindStateChanges:
 def to_flat_update(md_json, var_mapping):
     mp = defaultdict(lambda: defaultdict(lambda: set([]), {}), {})
     mc = defaultdict(lambda: defaultdict(lambda: [], {}), {})
+    mt = defaultdict(lambda: {}, {})
     for var in md_json:
         for k in var["triggers"]:
             condition = var["condition"]
@@ -329,8 +343,13 @@ def to_flat_update(md_json, var_mapping):
                 condition = re.sub(r'prev\([^)]+\)', get_prevname(p),
                                    condition)
 
+            if "types" in var:
+                for k, type in var["types"].items():
+                    contract, val = k.split(".", maxsplit=1)
+                    mt[contract][get_prevname(val)] = type
+
             mc[contract][trigger] += [(var_mapping[var["name"]], condition)]
-    return (mc, mp)
+    return (mc, mp, mt)
 
 
 def pprint_update(u, fn_name=None):
@@ -339,7 +358,6 @@ def pprint_update(u, fn_name=None):
     if "SUM" in s:
         s = f"bc.update({u[0]}, (true));\n"
 
-    print(u)
     if fn_name:
         if fn_name == u[1]:
             s = f"bc.update({u[0]}, true); // FUNCTION == {u[1]} \n"
@@ -363,7 +381,7 @@ def instrument(md, spec, contract, for_fuzzer=False):
     else:
         ltl_switch_case = ltl_tools.pretty_print_ba_ast(ltl_ast)
 
-    md, prevs = to_flat_update(md, var_mapping)
+    md, prevs, annot_prev_types = to_flat_update(md, var_mapping)
 
     lines = contract.splitlines(keepends=True)
     typer = solidity_ast_tools.StateVarTyper()
@@ -379,10 +397,14 @@ def instrument(md, spec, contract, for_fuzzer=False):
     ast = parser.parse(split_ret_src, loc=True)
     r = FixRets(split_ret_lines)
     parser.visit(ast, r)
+
+    for k, v in typer.mapping.items():
+        annot_prev_types[k] = annot_prev_types[k] | v
+
     p = SourceInstrumentor(split_ret_lines,
                            md,
                            prevs=prevs,
-                           state_var_types=typer.mapping)
+                           state_var_types=annot_prev_types)
     parser.visit(ast, p)
     s = p.instrumented()
 

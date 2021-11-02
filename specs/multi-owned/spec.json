@@ -4,7 +4,10 @@
                 "triggers": [
                         "MultiOwnable.msg.sender"
                 ],
-                "condition": "prev(owners)[msg.sender] == 0"
+                "condition": "prev(owners[msg.sender]) == 0",
+                "types": {
+                        "MultiOwnable.owners[msg.sender]": "address"
+                }
         },
         {
                 "name": "v1",

@@ -2,4 +2,5 @@ venv
 tags
 .vscode
 __pycache__
+crytic-export
 *.abi

@@ -1,0 +1,13 @@
+[
+	{
+		"name": "v0",
+		"triggers": ["Escrow.FUNCTION"],
+		"condition": "FUNCTION == \"cancel\""
+	},
+	{
+		"name": "v1",
+		"triggers": ["Escrow.msg.sender"],
+		"condition": "msg.sender == buyer"
+	}
+]
+

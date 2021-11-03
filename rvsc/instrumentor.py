@@ -312,21 +312,29 @@ class FindStateChanges:
         self.observed = defaultdict(lambda: [], {})
         self.observables = observables
 
+    def visitVariableDeclarationStatement(self, n: parser.Node):
+        if n.initialValue:
+            if len(n.variables) > 1:
+                raise Unimplemented("multi-initialized var decl stmt")
+            if n.variables[0].name in self.observables:
+                self.observed[n.loc["end"]["line"] - 1] = n.variables[0].name
+
     def visitBinaryOperation(self, n: parser.Node):
         if n.operator in ["=", "+=", "-="]:
-            if n.left.type == "Identifier":
-                if n.left.name in self.observables:
-                    self.observed[n.loc["end"]["line"] - 1] = n.left.name
-                pass
-            elif n.left.type == "IndexAccess":
-                x = n.left
-                while x.type == "IndexAccess":
-                    x = x.base
+            base_name = self.extractAccessBase(n.left)
+            if base_name in self.observables:
+                self.observed[n.loc["end"]["line"] - 1] = base_name
 
-                if x.name in self.observables:
-                    self.observed[x.loc["end"]["line"] - 1] = x.name
-            else:
-                raise Unimplemented("Unknown Assignment LHS")
+    def extractAccessBase(self, n: parser.Node):
+        if n.type == "Identifier":
+            return n.name
+        elif n.type == "IndexAccess":
+            return self.extractAccessBase(n.base)
+        elif n.type == "MemberAccess":
+            return self.extractAccessBase(n.expression)
+        else:
+            print(n)
+            raise Unimplemented("Unknown Assignment LHS")
 
 
 def to_flat_update(md_json, var_mapping):

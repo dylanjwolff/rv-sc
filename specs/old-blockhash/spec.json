@@ -1,0 +1,9 @@
+[
+	{
+		"name": "v0",
+		"triggers": [
+			"PredictTheBlockHashChallenge.answer"
+		],
+		"condition": "answer == 0"
+	}
+]

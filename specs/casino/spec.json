@@ -33,5 +33,19 @@
                         "Casino.FUNCTION"
                 ],
                 "condition": "FUNCTION == \"timeoutBet\""
+        },
+        {
+                "name": "pot_increased",
+                "triggers": [
+                        "Casino.pot"
+                ],
+                "condition": "prev(pot) < pot"
+        },
+        {
+                "name": "pot_zero",
+                "triggers": [
+                        "Casino.pot"
+                ],
+                "condition": "0 == pot"
         }
 ]

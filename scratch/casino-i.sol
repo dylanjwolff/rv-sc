@@ -4,6 +4,7 @@ contract Casino{
 
 address buchi_checker_address;
     mapping(uint => mapping (uint => address[])) placedBets;
+uint prev___pot;
     mapping(uint => mapping(address => uint)) potShare;
 
     uint[] numbersGuessed;
@@ -24,11 +25,14 @@ address buchi_checker_address;
     function openTable() public{
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
+            bc.enter();
+if (bc.get_call_depth() <= 1) {
 bc.update(0, true); // FUNCTION == "openTable" 
 bc.update(3, false); // FUNCTION == "closeTable" 
 bc.update(4, false); // FUNCTION == "placeBet" 
 bc.update(1, false); // FUNCTION == "resolveBet" 
 bc.update(2, false); // FUNCTION == "timeoutBet" 
+}
         require(msg.sender == owner);
         require(tableOpenTime == 0);
         require(!open);
@@ -38,16 +42,20 @@ bc.update(2, false); // FUNCTION == "timeoutBet"
         tableID++;
 bc.apply_updates();
 bc.check();
+bc.exit();
     }
 
     function closeTable() public{
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
+            bc.enter();
+if (bc.get_call_depth() <= 1) {
 bc.update(0, false); // FUNCTION == "openTable" 
 bc.update(3, true); // FUNCTION == "closeTable" 
 bc.update(4, false); // FUNCTION == "placeBet" 
 bc.update(1, false); // FUNCTION == "resolveBet" 
 bc.update(2, false); // FUNCTION == "timeoutBet" 
+}
         require(msg.sender == owner);
         require(pot == 0);
         require(open);
@@ -56,16 +64,20 @@ bc.update(2, false); // FUNCTION == "timeoutBet"
         delete numbersGuessed;
 bc.apply_updates();
 bc.check();
+bc.exit();
     }
 
     function timeoutBet() public{
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
+            bc.enter();
+if (bc.get_call_depth() <= 1) {
 bc.update(0, false); // FUNCTION == "openTable" 
 bc.update(3, false); // FUNCTION == "closeTable" 
 bc.update(4, false); // FUNCTION == "placeBet" 
 bc.update(1, false); // FUNCTION == "resolveBet" 
 bc.update(2, true); // FUNCTION == "timeoutBet" 
+}
         require(msg.sender == owner);
         require(now - tableOpenTime > 60 minutes);
         require(open);
@@ -84,16 +96,21 @@ bc.update(2, true); // FUNCTION == "timeoutBet"
         closeTable();
 bc.apply_updates();
 bc.check();
+bc.exit();
     }
 
     function placeBet(uint guessNo) payable public{
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
+            bc.enter();
+prev___pot = pot;
+if (bc.get_call_depth() <= 1) {
 bc.update(0, false); // FUNCTION == "openTable" 
 bc.update(3, false); // FUNCTION == "closeTable" 
 bc.update(4, true); // FUNCTION == "placeBet" 
 bc.update(1, false); // FUNCTION == "resolveBet" 
 bc.update(2, false); // FUNCTION == "timeoutBet" 
+}
         require(msg.value > 1 ether);
         require(open);
 
@@ -101,19 +118,26 @@ bc.update(2, false); // FUNCTION == "timeoutBet"
         placedBets[tableID][guessNo].push(msg.sender);
         numbersGuessed.push(guessNo);
         pot += msg.value;
+bc.update(5, (prev___pot < pot));
+bc.update(6, (0 == pot));
 bc.apply_updates();
 bc.check();
+bc.exit();
     }
 
     //we assume owner is trusted
     function resolveBet(uint _secretNumber) public{
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
+            bc.enter();
+prev___pot = pot;
+if (bc.get_call_depth() <= 1) {
 bc.update(0, false); // FUNCTION == "openTable" 
 bc.update(3, false); // FUNCTION == "closeTable" 
 bc.update(4, false); // FUNCTION == "placeBet" 
 bc.update(1, true); // FUNCTION == "resolveBet" 
 bc.update(2, false); // FUNCTION == "timeoutBet" 
+}
         require(open);
         require(pot > 0);
         require(msg.sender == owner);
@@ -126,10 +150,13 @@ bc.update(2, false); // FUNCTION == "timeoutBet"
         }
 
         pot = 0;
+bc.update(5, (prev___pot < pot));
+bc.update(6, (0 == pot));
 
         closeTable();
 bc.apply_updates();
 bc.check();
+bc.exit();
     }
 function initialize(address a) {
         if (address(buchi_checker_address) == address(0)) {
@@ -146,6 +173,19 @@ contract BuchiChecker {
         bool[] updates_v;
         mapping(uint32 => bool) vars;
         bool public invalid = false;
+        uint32 call_depth;
+        
+        function enter(){
+            call_depth = call_depth + 1;
+        }
+
+        function exit(){
+            call_depth = call_depth - 1;
+        }
+        
+        function get_call_depth() returns (uint32) {
+            return call_depth;
+        }
 
         function update(uint32 k, bool v) {
                 updates_k.push(k);
@@ -153,6 +193,7 @@ contract BuchiChecker {
         }
 
         function apply_updates() {
+                if (call_depth > 1) { return; }
                 while (updates_v.length > 0) {
                         uint32 k = updates_k[updates_k.length-1];
                         updates_k.length--;
@@ -169,62 +210,68 @@ contract BuchiChecker {
         }
 
         function check() {
+                if (call_depth > 1) { return; }
                
 if (state == 0) {
-	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
+	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4] && vars[6]) {
 		state = 3;
 	} else {
 		invalid = true;
 
-	}return;
+	}
+	return;
 }
 if (state == 1) {
 	if (!vars[0] && vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 0;
 	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 1;
-	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4]) {
+	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
 		state = 2;
-	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
+	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4] && vars[6]) {
 		state = 3;
 	} else if (!vars[0] && !vars[1] && vars[2] && !vars[3] && !vars[4] || vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 4;
 	} else {
 		invalid = true;
 
-	}return;
+	}
+	return;
 }
 if (state == 2) {
 	if (!vars[0] && vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 0;
-	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4]) {
+	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
 		state = 2;
 	} else if (!vars[0] && !vars[1] && vars[2] && !vars[3] && !vars[4]) {
 		state = 4;
 	} else {
 		invalid = true;
 
-	}return;
+	}
+	return;
 }
 if (state == 3) {
-	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
+	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4] && vars[6]) {
 		state = 3;
 	} else if (vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 4;
 	} else {
 		invalid = true;
 
-	}return;
+	}
+	return;
 }
 if (state == 4) {
-	if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4]) {
+	if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
 		state = 2;
-	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
+	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4] && vars[6]) {
 		state = 3;
 	} else {
 		invalid = true;
 
-	}return;
+	}
+	return;
 } 
         }
 }

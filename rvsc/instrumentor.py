@@ -174,9 +174,17 @@ class SourceInstrumentor:
             for update in self.updaters[self.contract_name]["msg.sender"]:
                 updated.append("msg.sender")
                 first_instrumentations.extend(pprint_update(update))
+
+            num_fn_updates = len(self.updaters[self.contract_name]["FUNCTION"])
+
+            if num_fn_updates > 0:
+                first_instrumentations.append(
+                    "if (bc.get_call_depth() <= 1) {\n")
             for update in self.updaters[self.contract_name]["FUNCTION"]:
                 updated.append("FUNCTION")
                 first_instrumentations.extend(pprint_update(update, fn_name))
+            if num_fn_updates > 0:
+                first_instrumentations.append("}\n")
 
         for arg in n.parameters.parameters:
             for update in self.updaters[self.contract_name][arg.name]:
@@ -204,7 +212,7 @@ class SourceInstrumentor:
                 else:
                     self.source_lines[line].extend(end_updates)
 
-        for trigger in updated:
+        for trigger in set(updated):
             if trigger in self.prevs[self.contract_name].keys():
                 prev_inits = [
                     f"{get_prevname(var)} = {var};\n"
@@ -229,9 +237,10 @@ INITIALIZE_CLIENT = """function initialize(address a) {
         }
 }
     """
-FOOTER = f"bc.apply_updates();\nbc.check();\n"
+FOOTER = f"bc.apply_updates();\nbc.check();\nbc.exit();\n"
 HEADER = f"""BuchiChecker bc = BuchiChecker(buchi_checker_address);
-            address prev_bc_address = buchi_checker_address;\n""" # @TODO make optional
+            address prev_bc_address = buchi_checker_address;
+            bc.enter();\n""" # @TODO make optional
 
 
 def pprint_checker():
@@ -242,6 +251,19 @@ def pprint_checker():
         bool[] updates_v;
         mapping(uint32 => bool) vars;
         bool public invalid = false;
+        uint32 call_depth;
+        
+        function enter(){
+            call_depth = call_depth + 1;
+        }
+
+        function exit(){
+            call_depth = call_depth - 1;
+        }
+        
+        function get_call_depth() returns (uint32) {
+            return call_depth;
+        }
 
         function update(uint32 k, bool v) {
                 updates_k.push(k);
@@ -249,6 +271,7 @@ def pprint_checker():
         }
 
         function apply_updates() {
+                if (call_depth > 1) { return; }
                 while (updates_v.length > 0) {
                         uint32 k = updates_k[updates_k.length-1];
                         updates_k.length--;
@@ -265,6 +288,7 @@ def pprint_checker():
         }
 
         function check() {
+                if (call_depth > 1) { return; }
                {CHECK_SWITCH_CASE} 
         }
 }

@@ -119,7 +119,6 @@ bc.update(2, false); // FUNCTION == "timeoutBet"
         numbersGuessed.push(guessNo);
         pot += msg.value;
 bc.update(5, (prev___pot < pot));
-bc.update(6, (0 == pot));
 bc.apply_updates();
 bc.check();
 bc.exit();
@@ -151,7 +150,6 @@ bc.update(2, false); // FUNCTION == "timeoutBet"
 
         pot = 0;
 bc.update(5, (prev___pot < pot));
-bc.update(6, (0 == pot));
 
         closeTable();
 bc.apply_updates();
@@ -213,7 +211,7 @@ contract BuchiChecker {
                 if (call_depth > 1) { return; }
                
 if (state == 0) {
-	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4] && vars[6]) {
+	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
 		state = 3;
 	} else {
 		invalid = true;
@@ -228,7 +226,7 @@ if (state == 1) {
 		state = 1;
 	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
 		state = 2;
-	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4] && vars[6]) {
+	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
 		state = 3;
 	} else if (!vars[0] && !vars[1] && vars[2] && !vars[3] && !vars[4] || vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 4;
@@ -252,7 +250,7 @@ if (state == 2) {
 	return;
 }
 if (state == 3) {
-	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4] && vars[6]) {
+	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
 		state = 3;
 	} else if (vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 4;
@@ -265,7 +263,7 @@ if (state == 3) {
 if (state == 4) {
 	if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
 		state = 2;
-	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4] && vars[6]) {
+	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
 		state = 3;
 	} else {
 		invalid = true;

@@ -40,12 +40,5 @@
                         "Casino.pot"
                 ],
                 "condition": "prev(pot) < pot"
-        },
-        {
-                "name": "pot_zero",
-                "triggers": [
-                        "Casino.pot"
-                ],
-                "condition": "0 == pot"
         }
 ]

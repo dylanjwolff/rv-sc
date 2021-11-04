@@ -17,26 +17,22 @@ snapshots['test_smoke_ast_pretty 1'] = '''
 if (state == 0) {
 \tif (!vars[0]) {
 \t\tstate = 0;
-\t} else {
-\t\trevert("Invalid Buchi State");
-\t}
 \t} else if (vars[0]) {
 \t\tstate = 1;
 \t} else {
 \t\trevert("Invalid Buchi State");
 \t}
+\treturn;
 }
 if (state == 1) {
 \tif (!vars[0] && !vars[1]) {
 \t\tstate = 0;
-\t} else {
-\t\trevert("Invalid Buchi State");
-\t}
 \t} else if (vars[0] && !vars[1]) {
 \t\tstate = 1;
 \t} else {
 \t\trevert("Invalid Buchi State");
 \t}
+\treturn;
 }'''
 
 snapshots['test_smoke_ba_ast 1'] = [
@@ -55,3 +51,10 @@ snapshots['test_smoke_ba_ast 1'] = [
         ]
     )
 ]
+
+snapshots['test_start_state 1'] = 0
+
+snapshots['test_var_mapping 1'] = {
+    'red': 0,
+    'yellow': 1
+}

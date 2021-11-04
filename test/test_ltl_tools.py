@@ -22,3 +22,17 @@ def test_impl(snapshot):
                             'det').to_str()
     s = ltl_tools.var_mapping(g)
     snapshot.assert_match(s)
+
+
+def test_var_mapping(snapshot):
+    g: str = spot.translate('!F(red & X(yellow))', 'monitor', 'det').to_str()
+    vm = ltl_tools.var_mapping(g)
+
+    snapshot.assert_match(vm)
+
+
+def test_start_state(snapshot):
+    g: str = spot.translate('!F(red & X(yellow))', 'monitor', 'det').to_str()
+    s = ltl_tools.start_state(g)
+
+    snapshot.assert_match(s)

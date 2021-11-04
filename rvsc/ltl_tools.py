@@ -96,6 +96,12 @@ def var_mapping(ltl_str):
     return mapping
 
 
+def start_state(ltl_str):
+    start = ltl_str.split("Start:")[1].split("\n", 1)[0]
+    start = start.strip()
+    return int(start)
+
+
 def pretty_print_ba_exp(e: lark.Tree):
     s = ""
     if e.data == "bool":
@@ -142,8 +148,9 @@ def pretty_print_ba_ast(
             else:
                 pretty_s += f"\n\t}} else if ({pretty_print_ba_exp(edge.cond[0])}) {{"
             pretty_s += f"\n\t\tstate = {edge.dest.children[0]};"
-            if edge.cond != None:
-                pretty_s += f"\n\t}} else {{\n\t\t{failure_case}\n\t}}"
+        if edge.cond != None:
+            pretty_s += f"\n\t}} else {{\n\t\t{failure_case}\n\t}}"
+        pretty_s += "\n\treturn;"
         pretty_s += "\n}"
 
     return pretty_s

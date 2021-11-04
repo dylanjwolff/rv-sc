@@ -1,0 +1,37 @@
+[
+        {
+                "name": "open",
+                "triggers": [
+                        "Casino.FUNCTION"
+                ],
+                "condition": "FUNCTION == \"openTable\""
+        },
+        {
+                "name": "close",
+                "triggers": [
+                        "Casino.FUNCTION"
+                ],
+                "condition": "FUNCTION == \"closeTable\""
+        },
+        {
+                "name": "bet",
+                "triggers": [
+                        "Casino.FUNCTION"
+                ],
+                "condition": "FUNCTION == \"placeBet\""
+        },
+        {
+                "name": "resolve",
+                "triggers": [
+                        "Casino.FUNCTION"
+                ],
+                "condition": "FUNCTION == \"resolveBet\""
+        },
+        {
+                "name": "timeout",
+                "triggers": [
+                        "Casino.FUNCTION"
+                ],
+                "condition": "FUNCTION == \"timeoutBet\""
+        }
+]

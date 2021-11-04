@@ -237,15 +237,11 @@ HEADER = f"""BuchiChecker bc = BuchiChecker(buchi_checker_address);
 def pprint_checker():
     return """
 \n\ncontract BuchiChecker {
-        uint256 state;
+        uint256 state = {INITIAL_STATE};
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
         bool public invalid = false;
-
-        constructor() {
-                state = 0;
-        }
 
         function update(uint32 k, bool v) {
                 updates_k.push(k);
@@ -366,6 +362,7 @@ def to_flat_update(md_json, var_mapping):
                     contract, val = k.split(".", maxsplit=1)
                     mt[contract][get_prevname(val)] = type
             mc[contract][trigger] += [(var_mapping[var["name"]], condition)]
+    print(mc)
     return (mc, mp, mt)
 
 
@@ -387,7 +384,7 @@ def pprint_update(u, fn_name=None):
 def instrument(md, spec, contract, for_fuzzer=False):
     ast = parser.parse(contract, loc=True)
     spot_form = spot \
-        .translate(spec, 'monitor', 'det').to_str()
+        .translate(spec, 'monitor').to_str()
 
     ltl_ast = ltl_tools.ltl_to_ba_ast(spot_form)
     var_mapping = ltl_tools.var_mapping(spot_form)
@@ -426,4 +423,5 @@ def instrument(md, spec, contract, for_fuzzer=False):
     s = p.instrumented()
 
     s = s.replace("{CHECK_SWITCH_CASE}", ltl_switch_case)
+    s = s.replace("{INITIAL_STATE}", str(ltl_tools.start_state(spot_form)))
     return s

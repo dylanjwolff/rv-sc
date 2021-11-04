@@ -230,7 +230,8 @@ INITIALIZE_CLIENT = """function initialize(address a) {
 }
     """
 FOOTER = f"bc.apply_updates();\nbc.check();\n"
-HEADER = f"BuchiChecker bc = BuchiChecker(buchi_checker_address);\n"
+HEADER = f"""BuchiChecker bc = BuchiChecker(buchi_checker_address);
+            address prev_bc_address = buchi_checker_address;\n""" # @TODO make optional
 
 
 def pprint_checker():

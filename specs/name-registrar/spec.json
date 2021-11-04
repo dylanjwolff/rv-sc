@@ -1,0 +1,7 @@
+[
+            {
+                    "name": "v0",
+                    "triggers": ["NameRegistrar.registeredNameRecord"],
+                    "condition":  "registeredNameRecord[msg.sender].name == _name"
+            }
+]

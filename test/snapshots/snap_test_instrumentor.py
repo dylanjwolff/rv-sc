@@ -7,6 +7,23 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
+snapshots['test_F_reader 1'] = {
+    'Z': {
+        'FUNCTION == "foo"': [
+            (
+                0,
+                'y == x'
+            )
+        ],
+        'FUNCTION_END': [
+            (
+                1,
+                'a == b'
+            )
+        ]
+    }
+}
+
 snapshots['test_md_reader_currs 1'] = {
     'Z': {
         'x': [

@@ -79,5 +79,6 @@ def available():
     vs = [fname.split("-v")[1] for fname in fnames]
     return vs
 
-
-print(Solc("^0.4.18").get())
+if __name__ == "__main__":
+    v = sys.argv[1]
+    Solc(v).install()

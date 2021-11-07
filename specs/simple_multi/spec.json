@@ -1,0 +1,13 @@
+[
+        {
+                "name": "setBoth",
+                "triggers": ["A.FUNCTION"],
+                "condition": "FUNCTION == \"set_both\""
+        },
+        {
+                "name": "set",
+                "triggers": ["B.FUNCTION"],
+                "condition": "FUNCTION == \"set\""
+        }
+
+]

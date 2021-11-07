@@ -5,17 +5,22 @@ import re
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.style as style
+import time
 
 
 def single_trial(contract_name,
                  contract_file,
                  num_tests=200,
-                 df=pd.DataFrame()):
+                 dfg=pd.DataFrame(),
+                 dft=pd.DataFrame()):
+    start = time.time()
     o = sp.run(
         f"echidna-test --contract {contract_name} {contract_file} --test-limit {num_tests} --config <(echo \"estimateGas: true\") --format text",
         shell=True,
         executable="/bin/bash",
         capture_output=True)
+    end = time.time()
 
     lines_with_max = [
         line.decode("utf-8") for line in o.stdout.splitlines()
@@ -31,32 +36,45 @@ def single_trial(contract_name,
         gas = int(o.group(2))
         if fn_name != "initialize":
             mapping[fn_name] = gas
-    df = df.append(mapping, ignore_index=True)
-    return df
+    dfg = dfg.append(mapping, ignore_index=True)
+    dft = dft.append({"time (s)": end - start}, ignore_index=True)
+    return (dfg, dft)
 
 
 def multi_trial(contract_name,
                 contract_file,
                 num_trials,
                 num_tests=200,
-                df=pd.DataFrame()):
+                dfg=pd.DataFrame(),
+                dft=pd.DataFrame()):
     for i in range(0, num_trials):
-        df = single_trial(contract_name, contract_file, num_tests, df)
-    return df
+        (dfg, dft) = single_trial(contract_name, contract_file, num_tests, dfg,
+                                  dft)
+    return (dfg, dft)
 
 
-def gather_data(contracts_files, trials, num_tests=2000):
-    data = []
+def gather_data(contracts_files, trials, num_tests=200):
+    data_g = []
+    data_t = []
     filenames = []
     for contract_name, contract_file in contracts_files:
-        data.append(
-            multi_trial(contract_name, contract_file, trials, num_tests))
+        dfg, dft = multi_trial(contract_name, contract_file, trials, num_tests)
+        data_g.append(dfg)
+        data_t.append(dft)
         filenames.append(contract_file)
 
-    df = pd.concat(data, keys=filenames, names=["file", "trial"], join="inner")
-    df.columns.name = "function"
+    dfg = pd.concat(data_g,
+                    keys=filenames,
+                    names=["file", "trial"],
+                    join="inner")
+    dfg.columns.name = "function"
 
-    return df
+    dft = pd.concat(data_t,
+                    keys=filenames,
+                    names=["file", "trial"],
+                    join="inner")
+
+    return (dfg, dft)
 
 
 contract_name = "TestCasino"
@@ -68,22 +86,38 @@ contracts_files = zip(
     [contract_name] * 3,
     [base_contract_file, larva_contract_file, buchi_contract_file])
 
-path = "experiments/gas_casino.pkl"
-if os.path.isfile(path):
-    df = pd.read_pickle(path)
+path_g = "experiments/gas_casino.pkl"
+path_t = "experiments/time_casino.pkl"
+if os.path.isfile(path_g) and os.path.isfile(path_t):
+    dfg = pd.read_pickle(path_g)
+    dft = pd.read_pickle(path_t)
 else:
-    df = gather_data(contracts_files, 2)
-    df.to_pickle(path)
-df = df.drop("timeoutBet", axis=1)
-df = df.stack()
-df.name = "gas"
-df = df.reset_index()
+    (dfg, dft) = gather_data(contracts_files, 30)
+    dfg.to_pickle(path_g)
+    dft.to_pickle(path_t)
+dfg = dfg.drop("timeoutBet", axis=1)
+dfg = dfg.stack()
+dfg.name = "gas"
+dfg = dfg.reset_index()
+
+dft = dft.reset_index()
+
+# style.use('seaborn-poster')  #sets the size of the charts
+style.use('ggplot')
 
 sns.catplot(
-    x="function",  # x variable name 
+    x="file",  # x variable name
+    y="time (s)",  # y variable name
+    data=dft,  # dataframe to plot
+    kind="bar")
+
+plt.show()
+
+sns.catplot(
+    x="function",  # x variable name
     y="gas",  # y variable name
     hue="file",  # group variable name
-    data=df,  # dataframe to plot
+    data=dfg,  # dataframe to plot
     kind="bar")
 
 plt.show()

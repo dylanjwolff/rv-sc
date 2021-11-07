@@ -131,6 +131,8 @@ class SourceInstrumentor:
         self.state_var_types = state_var_types
 
     def visitContractDefinition(self, n: parser.Node):
+        print(f"Visitng contract {n.name}")
+        print(f"Updaters {self.updaters}")
         self.contract_name = n.name
         if not self.contract_name in self.updaters.keys():
             return

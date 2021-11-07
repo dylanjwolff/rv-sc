@@ -13,8 +13,6 @@ uint prev___pot;
 
     uint tableID;
     uint tableOpenTime;
-    bool open;
-    bool betted;
 
     address owner;
 
@@ -35,10 +33,8 @@ bc.update(2, false); // FUNCTION == "timeoutBet"
 }
         require(msg.sender == owner);
         require(tableOpenTime == 0);
-        require(!open);
 
         tableOpenTime = now;
-        open = true;
         tableID++;
 bc.apply_updates();
 bc.check();
@@ -58,9 +54,7 @@ bc.update(2, false); // FUNCTION == "timeoutBet"
 }
         require(msg.sender == owner);
         require(pot == 0);
-        require(open);
 
-        open = false;
         delete numbersGuessed;
 bc.apply_updates();
 bc.check();
@@ -80,7 +74,6 @@ bc.update(2, true); // FUNCTION == "timeoutBet"
 }
         require(msg.sender == owner);
         require(now - tableOpenTime > 60 minutes);
-        require(open);
         require(pot != 0);
         
         for (uint i = 0; i < numbersGuessed.length; i++) {
@@ -112,7 +105,6 @@ bc.update(1, false); // FUNCTION == "resolveBet"
 bc.update(2, false); // FUNCTION == "timeoutBet" 
 }
         require(msg.value > 1 ether);
-        require(open);
 
         potShare[tableID][msg.sender] += msg.value;
         placedBets[tableID][guessNo].push(msg.sender);
@@ -137,8 +129,6 @@ bc.update(4, false); // FUNCTION == "placeBet"
 bc.update(1, true); // FUNCTION == "resolveBet" 
 bc.update(2, false); // FUNCTION == "timeoutBet" 
 }
-        require(open);
-        require(pot > 0);
         require(msg.sender == owner);
 
         uint l = placedBets[tableID][_secretNumber].length;
@@ -166,7 +156,7 @@ function initialize(address a) {
 
 
 contract BuchiChecker {
-        uint256 state = 1;
+        uint256 state = 2;
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
@@ -211,21 +201,29 @@ contract BuchiChecker {
                 if (call_depth > 1) { return; }
                
 if (state == 0) {
-	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
-		state = 3;
+	if (vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
+		state = 4;
 	} else {
 		revert("Invalid Buchi State");
 	}
 	return;
 }
 if (state == 1) {
-	if (!vars[0] && vars[1] && !vars[2] && !vars[3] && !vars[4]) {
+	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
 		state = 0;
-	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
+	} else {
+		revert("Invalid Buchi State");
+	}
+	return;
+}
+if (state == 2) {
+	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
+		state = 0;
+	} else if (!vars[0] && vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 1;
-	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
+	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 2;
-	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
+	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
 		state = 3;
 	} else if (!vars[0] && !vars[1] && vars[2] && !vars[3] && !vars[4] || vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
 		state = 4;
@@ -234,11 +232,9 @@ if (state == 1) {
 	}
 	return;
 }
-if (state == 2) {
+if (state == 3) {
 	if (!vars[0] && vars[1] && !vars[2] && !vars[3] && !vars[4]) {
-		state = 0;
-	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
-		state = 2;
+		state = 1;
 	} else if (!vars[0] && !vars[1] && vars[2] && !vars[3] && !vars[4]) {
 		state = 4;
 	} else {
@@ -246,20 +242,10 @@ if (state == 2) {
 	}
 	return;
 }
-if (state == 3) {
-	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
-		state = 3;
-	} else if (vars[0] && !vars[1] && !vars[2] && !vars[3] && !vars[4]) {
-		state = 4;
-	} else {
-		revert("Invalid Buchi State");
-	}
-	return;
-}
 if (state == 4) {
-	if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
-		state = 2;
-	} else if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
+	if (!vars[0] && !vars[1] && !vars[2] && vars[3] && !vars[4]) {
+		state = 0;
+	} else if (!vars[0] && !vars[1] && !vars[2] && !vars[3] && vars[4] && vars[5]) {
 		state = 3;
 	} else {
 		revert("Invalid Buchi State");
@@ -278,8 +264,7 @@ contract TestCasino is Casino {
 	}
 
 
-  function echidna_buchi_check() public view returns(bool){
-       BuchiChecker bc = BuchiChecker(buchi_checker_address);
-       return !bc.invalid();
+  function echidna_dummy() public view returns(bool){
+       return true;
   }
 }

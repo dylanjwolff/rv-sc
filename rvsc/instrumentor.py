@@ -177,16 +177,18 @@ class SourceInstrumentor:
                 updated.append("msg.sender")
                 first_instrumentations.extend(pprint_update(update))
 
-            num_fn_updates = len(self.updaters[self.contract_name]["FUNCTION"])
-
-            if num_fn_updates > 0:
-                first_instrumentations.append(
-                    "if (bc.get_call_depth() <= 1) {\n")
+            fn_updates = []
+            fn_updated = None
             for update in self.updaters[self.contract_name]["FUNCTION"]:
-                updated.append("FUNCTION")
-                first_instrumentations.extend(pprint_update(update, fn_name))
-            if num_fn_updates > 0:
-                first_instrumentations.append("}\n")
+                if update[1] == fn_name:
+                    updated.append("FUNCTION")
+                    fn_updated = update
+                    fn_updates.extend(pprint_update(update, fn_name))
+
+            if len(fn_updates) > 0:
+                fn_updates = ["if (bc.get_call_depth() <= 1) {\n"] + fn_updates
+                fn_updates.append("}\n")
+            first_instrumentations.extend(fn_updates)
 
         for arg in n.parameters.parameters:
             for update in self.updaters[self.contract_name][arg.name]:
@@ -205,6 +207,14 @@ class SourceInstrumentor:
             updated.append("FUNCTION_END")
 
         end_updates.append(FOOTER)
+
+        if len(fn_updates) > 0:
+            end_updates.append("if (bc.get_call_depth() <= 1) {\n")
+            end_updates.extend(pprint_update(
+                fn_updated, fn_name, exit_fn=True))  # exit fn after check
+            end_updates.append("}\n")
+
+        end_updates.append("bc.exit();\n")
 
         if len(n.body) > 0:
             for line, is_ret in fn_exits(n):
@@ -239,7 +249,7 @@ INITIALIZE_CLIENT = """function initialize(address a) {
         }
 }
     """
-FOOTER = f"bc.apply_updates();\nbc.check();\nbc.exit();\n"
+FOOTER = f"bc.apply_updates();\nbc.check();\n"
 HEADER = f"""BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
             bc.enter();\n""" # @TODO make optional
@@ -392,14 +402,14 @@ def to_flat_update(md_json, var_mapping):
     return (mc, mp, mt)
 
 
-def pprint_update(u, fn_name=None):
+def pprint_update(u, fn_name=None, exit_fn=False):
     s = f"bc.update({u[0]}, ({u[1]}));\n"
     # s = s.replace("SUM", "bc.sum")
     if "SUM" in s:
         s = f"bc.update({u[0]}, (true));\n"
 
     if fn_name:
-        if fn_name == u[1]:
+        if fn_name == u[1] and not exit_fn:
             s = f"bc.update({u[0]}, true); // FUNCTION == {u[1]} \n"
         else:
             s = f"bc.update({u[0]}, false); // FUNCTION == {u[1]} \n"

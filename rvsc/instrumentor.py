@@ -131,8 +131,6 @@ class SourceInstrumentor:
         self.state_var_types = state_var_types
 
     def visitContractDefinition(self, n: parser.Node):
-        print(f"Visitng contract {n.name}")
-        print(f"Updaters {self.updaters}")
         self.contract_name = n.name
         if not self.contract_name in self.updaters.keys():
             return
@@ -149,7 +147,6 @@ class SourceInstrumentor:
                 if get_prevname(var) in contract_types:
                     prev_type = contract_types[get_prevname(var)]
                 else:
-                    print(contract_types)
                     prev_type = contract_types[var]
 
                 prev_decls.extend(f"{prev_type} {get_prevname(var)};\n")
@@ -366,7 +363,6 @@ class FindStateChanges:
         elif n.type == "MemberAccess":
             return self.extractAccessBase(n.expression)
         else:
-            print(n)
             raise Unimplemented("Unknown Assignment LHS")
 
 
@@ -398,7 +394,6 @@ def to_flat_update(md_json, var_mapping):
                     contract, val = k.split(".", maxsplit=1)
                     mt[contract][get_prevname(val)] = type
             mc[contract][trigger] += [(var_mapping[var["name"]], condition)]
-    print(mc)
     return (mc, mp, mt)
 
 

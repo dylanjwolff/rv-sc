@@ -41,7 +41,6 @@ parser.add_argument('-o',
 parser.add_argument('-f', '--for-fuzzer', action='store_true')
 
 args = parser.parse_args()
-print(args)
 
 with open(args.infile[0]) as f, \
      open(args.metadata[0]) as fm, \

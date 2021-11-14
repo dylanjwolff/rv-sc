@@ -1,3 +1,5 @@
+"""Tools for working with the SPOT library output
+"""
 from lark import Lark
 from lark import Transformer
 import lark
@@ -43,6 +45,8 @@ leparser = Lark(r"""
 
 
 class Edge:
+    """An edge in the automaton
+    """
     def __init__(self, a, b, c):
         self.cond = a
         self.dest = b
@@ -56,6 +60,8 @@ class Edge:
 
 
 class MyTransformer(Transformer):
+    """A Lark transformer for the AST of SPOT's output
+    """
     def state(self, name_edge):
         n = name_edge[0]
         e = name_edge[1:]
@@ -77,6 +83,14 @@ class Unreachable(Exception):
 
 
 def ltl_to_ba_ast(ltl_str):
+    """Parses the SPOT library output
+
+    Args:
+        ltl_str (str): output from the SPOT library
+
+    Returns:
+        the transformed AST of the automaton
+    """
     body_str = ltl_str.split("--BODY--")[-1].split("--END--")[0]
 
     ptree = leparser.parse(body_str)
@@ -87,22 +101,49 @@ def ltl_to_ba_ast(ltl_str):
 
 
 def var_mapping(ltl_str):
+    """Extracts the mapping of variables to variable ID's in the SPOT output
+
+    Args:
+        ltl_str (str): output from the SPOT library
+
+    Returns:
+        mapping (dict): a mapping of variable names to IDs
+    """
     ap = ltl_str.split("AP:")[1].split("\n", 1)[0]
-    ap = ap.replace('"', '')
-    vars = ap.split()[1:]
+    ap = ap.replace('"', "")
+    varnames = ap.split()[1:]
     mapping = {}
-    for ind, var in enumerate(vars):
+    for ind, var in enumerate(varnames):
         mapping[var] = ind
     return mapping
 
 
 def start_state(ltl_str):
+    """Extracts the starting state of the automaton in the SPOT library output
+
+    Args:
+        ltl_str (str): the SPOT library output
+
+    Returns:
+        start (int): the starting state ID
+    """
     start = ltl_str.split("Start:")[1].split("\n", 1)[0]
     start = start.strip()
     return int(start)
 
 
 def pretty_print_ba_exp(e: lark.Tree):
+    """Recursively pretty-prints a Buchi automaton expression in Solidity
+
+    Args:
+        e (lark.Tree): the transformed AST of the parser SPOT library output
+
+    Raises:
+        Unreachable: if an unknown expression is in the AST
+
+    Returns:
+        s (str): the resulting string Solidity expression
+    """
     s = ""
     if e.data == "bool":
         (b, ) = e.children
@@ -137,18 +178,31 @@ def pretty_print_ba_ast(
     ba_ast,
     failure_case='revert("Invalid Buchi State");',
 ):
+    """Pretty prints the Buchi automaton as a series of if-else conditions in Solidity
+
+    Args:
+        ba_ast (lark.Tree): the transformed parsed SPOT library output
+        failure_case (str, optional): What to do if a specification is violated.
+            Defaults to 'revert("Invalid Buchi State");'.
+
+    Raises:
+        Unreachable: Edges of the automaton should always have conditions
+
+    Returns:
+        str: the Solidity code
+    """
     pretty_s = ""
     for state in ba_ast:
         pretty_s += f"\nif (state == {state[0].children[0]}) {{"
         for edge in state[1]:
-            if edge.cond == None:
-                raise ValueError("No edge condition!")
+            if edge.cond is None:
+                raise Unreachable("No edge condition!")
             if edge == state[1][0]:
                 pretty_s += f"\n\tif ({pretty_print_ba_exp(edge.cond[0])}) {{"
             else:
                 pretty_s += f"\n\t}} else if ({pretty_print_ba_exp(edge.cond[0])}) {{"
             pretty_s += f"\n\t\tstate = {edge.dest.children[0]};"
-        if edge.cond != None:
+        if len(state[1]) > 0:
             pretty_s += f"\n\t}} else {{\n\t\t{failure_case}\n\t}}"
         pretty_s += "\n\treturn;"
         pretty_s += "\n}"

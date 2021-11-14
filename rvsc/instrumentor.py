@@ -409,10 +409,7 @@ def first_line(fn: parser.Node):
 class FindStateChanges:
     """Visitor to find instrumentation points in AST
     """
-    def __init__(self,
-                 observables=[
-                     "owner", "balances", "FUNCTION_START", "FUNCTION_NAME"
-                 ]):
+    def __init__(self, observables):
         self.observed = defaultdict(lambda: [], {})
         self.observables = observables
 
@@ -485,7 +482,7 @@ def to_flat_update(md_json, var_mapping):
             condition = var["condition"]
             contract, trigger = k.split(".", maxsplit=1)
 
-            prevs = re.findall(r'prev\([^)]+\)', condition)
+            prevs = re.findall(r"prev\([^)]+\)", condition)
             prevs = [p[5:-1].strip() for p in prevs]
             mp[contract][trigger].update(prevs)
 
@@ -493,15 +490,15 @@ def to_flat_update(md_json, var_mapping):
                 condition = condition.split("==")[1].strip()
 
             for p in prevs:
-                condition = re.sub(r'prev\([^)]+\)',
+                condition = re.sub(r"prev\([^)]+\)",
                                    get_prevname(p),
                                    condition,
                                    count=1)
 
             if "types" in var:
-                for k, type in var["types"].items():
-                    contract, val = k.split(".", maxsplit=1)
-                    mt[contract][get_prevname(val)] = type
+                for key, type_i in var["types"].items():
+                    contract, val = key.split(".", maxsplit=1)
+                    mt[contract][get_prevname(val)] = type_i
             mc[contract][trigger] += [(var_mapping[var["name"]], condition)]
     return (mc, mp, mt)
 
@@ -511,8 +508,10 @@ def pprint_update(u, fn_name=None, exit_fn=False):
 
     Args:
         u (int, str): a tuple of the updated variable id and its condition
-        fn_name (str, optional): the name of the function if the condition involves a function name
-        exit_fn (bool, optional): whether or not this checks on exit. Defaults to False.
+        fn_name (str, optional): the name of the function if the condition involves
+            a function name
+        exit_fn (bool, optional): whether or not this checks on exit.
+            Defaults to False.
 
     Returns:
         [type]: [description]
@@ -548,7 +547,7 @@ def instrument(md, spec, contract, for_fuzzer=False):
 
     ast = parser.parse(contract, loc=True)
     spot_form = spot \
-        .translate(spec, 'monitor').to_str()
+        .translate(spec, "monitor").to_str()
 
     ltl_ast = ltl_tools.ltl_to_ba_ast(spot_form)
     var_mapping = ltl_tools.var_mapping(spot_form)

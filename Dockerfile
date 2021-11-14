@@ -31,6 +31,6 @@ COPY rvsc/ rvsc
 COPY specs/ specs
 COPY config/ config
 
-RUN pytest -v
+RUN pytest
 
 CMD pytest

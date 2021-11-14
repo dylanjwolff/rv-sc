@@ -1,9 +1,7 @@
+"""Solidity Version Manager
+"""
 import os
-import subprocess
 import sys
-import getopt
-import argparse
-import subprocess as sp
 from solcx import install_solc
 
 # Note the static binaries are Linux only, so OK to assume /'s for paths
@@ -12,20 +10,22 @@ SOLC_VERSIONS = open(
     os.path.expanduser("config/solc-versions.txt")).readlines()
 
 
-def vtuple(v):
-    s = v.split(".")
+def vtuple(ver):
+    s = ver.split(".")
     return (s[0][1:], s[1], s[2])
 
 
-def major(v):
-    return vtuple(v)[1]
+def major(ver):
+    return vtuple(ver)[1]
 
 
 class Solc:
+    """Class for finding appropriate versions of Solc to use from a base version
+    """
     def __init__(self, v: str, use_mm=False, force_exact=False):
         assert not (force_exact and use_mm)
         v = v.strip()
-        assert v[0].isdigit() or v[0] == '^'
+        assert v[0].isdigit() or v[0] == "^"
         if v[0] == "^":
             self.version = v[1:]
             self.use_mm = True
@@ -43,6 +43,14 @@ class Solc:
             self.use_mm = False
 
     def can_nonbreaking_upgrade_by(self, v):
+        """Determine if self.version can be safely upgraded by v
+
+        Args:
+            v (str): a version string
+
+        Returns:
+            bool: True iff upgradeable
+        """
         bytuple = vtuple(v)
         mytuple = vtuple(self.version)
 
@@ -55,6 +63,14 @@ class Solc:
             return False
 
     def find_major_match(self, vers):
+        """finds a major version (release.major.minor) match in vers for self.version
+
+        Args:
+            vers ([str]): a list of candidate version strings
+
+        Returns:
+            str: the matching version string (or self.version if no match)
+        """
         vers = sorted(vers)
         vers.reverse()
         for v in vers:
@@ -63,21 +79,34 @@ class Solc:
         return self.version
 
     def get(self):
+        """Gets the version (or its major match if self.use_mm )
+
+        Returns:
+            str: the version string
+        """
         if self.use_mm:
             return self.mm
         else:
             return self.version
 
     def install(self):
+        """Installs the appropriate version of Solc with Solcx
+        """
         v = self.get()
         if not v in available():
             install_solc(v)
 
 
 def available():
+    """lists already installed versions of the Solidity compiler 
+
+    Returns:
+        [str]: a list of version strings
+    """
     fnames = os.listdir(INSTALL_DIR)
     vs = [fname.split("-v")[1] for fname in fnames]
     return vs
+
 
 if __name__ == "__main__":
     v = sys.argv[1]

@@ -1,4 +1,5 @@
-from io import StringIO
+"""Tools for working with the parsed Solidity AST
+"""
 from solidity_parser import parser
 
 
@@ -19,6 +20,8 @@ def get_compiler_version(contract):
 
 
 class StateVarTyper:
+    """Visitor to determine the types of state variables
+    """
     def __init__(self):
         self.mapping = {}
 
@@ -37,6 +40,8 @@ class StateVarTyper:
 
 
 class SourcePrettyPrinter:
+    """Pretty-printer for the Solidity AST
+    """
     def __init__(self, source_lines):
         self.source_lines = source_lines
         self.out_s = ""
@@ -82,8 +87,7 @@ class SourcePrettyPrinter:
 
     def visitFunctionDefinition(self, n: parser.Node):
         if n.isConstructor:
-            # NOTE this is constructor in the TS pretty-printer
-            self.out_s += "function "
+            self.out_s += "constructor "
         else:
             self.out_s += "function "
 
@@ -384,6 +388,14 @@ def has_child(n: parser.Node):
 
 
 def empty_loc(a):
+    """Determine if the loc for an AST node has size
+
+    Args:
+        a (parser.loc): a location for an AST node
+
+    Returns:
+        bool: True if the loc's start and end are the same
+    """
     return a["start"]["line"] == a["end"]["line"] \
         and a["start"]["column"] == a["end"]["column"]
 
@@ -396,6 +408,15 @@ def get_or_default(n, attr, default):
 
 
 def substr_from_loc(lines, loc):
+    """Gets the substring referred to by a location
+
+    Args:
+        lines ([str]): the source lines
+        loc (parser.loc): the location in question
+
+    Returns:
+        str: the substring delineated by loc
+    """
     start_line = loc["start"]["line"] - 1
     start_col = loc["start"]["column"]
     end_line = loc["end"]["line"] - 1

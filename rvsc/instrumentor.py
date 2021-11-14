@@ -291,10 +291,10 @@ INITIALIZE_CLIENT = """function initialize(address a) {
         }
 }
     """
-FOOTER = f"bc.apply_updates();\nbc.check();\n"
-HEADER = f"""BuchiChecker bc = BuchiChecker(buchi_checker_address);
+FOOTER = "bc.apply_updates();\nbc.check();\n"
+HEADER = """BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
-            bc.enter();\n""" # @TODO make optional
+            bc.enter();\n"""
 
 
 def pprint_checker():
@@ -490,7 +490,6 @@ def to_flat_update(md_json, var_mapping):
             mp[contract][trigger].update(prevs)
 
             if "FUNCTION" in condition:
-                # @TODO add some checks here
                 condition = condition.split("==")[1].strip()
 
             for p in prevs:
@@ -578,7 +577,7 @@ def instrument(md, spec, contract, for_fuzzer=False):
     parser.visit(ast, r)
 
     for k, v in typer.mapping.items():
-        annot_prev_types[k] = annot_prev_types[k] | v
+        annot_prev_types[k] = {**annot_prev_types[k], **v}
 
     p = SourceInstrumentor(split_ret_lines,
                            md,

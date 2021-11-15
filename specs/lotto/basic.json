@@ -1,6 +1,0 @@
-[
-	{
-		"triggers": ["Lotto.payedOut"],
-		"condition": "payedOut == false"
-	}
-]

@@ -5,26 +5,35 @@ address buchi_checker_address;
      bool public payedOut = false;
 uint256 prev___this_balance;
      address public winner;
-     uint public winAmount = 1;
+     uint public winAmount = 10;
 
      // ... extra functionality here
 
      function sendToWinner() public {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
-bc.update(0, true); // FUNCTION == "sendToWinner" 
+            address prev_bc_address = buchi_checker_address;
+            bc.enter();
 prev___this_balance = this.balance;
+if (bc.get_call_depth() <= 1) {
+bc.update(0, true); // FUNCTION == "sendToWinner" 
+}
          require(!payedOut);
          // <yes> <report> UNCHECKED_LL_CALLS
-         winner.transfer(winAmount);
+         winner.send(winAmount);
          payedOut = true;
 bc.update(1, (this.balance == prev___this_balance - winAmount));
 bc.apply_updates();
 bc.check();
+if (bc.get_call_depth() <= 1) {
+bc.update(0, false); // FUNCTION == "sendToWinner" 
+}
+bc.exit();
      }
 
      function withdrawLeftOver(uint256 i) public {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
-bc.update(0, false); // FUNCTION == "sendToWinner" 
+            address prev_bc_address = buchi_checker_address;
+            bc.enter();
          require(payedOut);
          // <yes> <report> UNCHECKED_LL_CALLS
 	if (i < 100) {
@@ -32,6 +41,7 @@ bc.update(0, false); // FUNCTION == "sendToWinner"
 	}
 bc.apply_updates();
 bc.check();
+bc.exit();
      }
 function initialize(address a) {
         if (address(buchi_checker_address) == address(0)) {
@@ -43,14 +53,23 @@ function initialize(address a) {
 
 
 contract BuchiChecker {
-        uint256 state;
+        uint256 state = 0;
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
         bool public invalid = false;
+        uint32 call_depth;
+        
+        function enter(){
+            call_depth = call_depth + 1;
+        }
 
-        constructor() {
-                state = 0;
+        function exit(){
+            call_depth = call_depth - 1;
+        }
+        
+        function get_call_depth() returns (uint32) {
+            return call_depth;
         }
 
         function update(uint32 k, bool v) {
@@ -59,6 +78,7 @@ contract BuchiChecker {
         }
 
         function apply_updates() {
+                if (call_depth > 1) { return; }
                 while (updates_v.length > 0) {
                         uint32 k = updates_k[updates_k.length-1];
                         updates_k.length--;
@@ -75,6 +95,7 @@ contract BuchiChecker {
         }
 
         function check() {
+                if (call_depth > 1) { return; }
                
 if (state == 0) {
 	if (!vars[0] || vars[1]) {
@@ -83,16 +104,17 @@ if (state == 0) {
 		invalid = true;
 
 	}
+	return;
 } 
         }
 }
+    
 
 contract TestLotto is Lotto {
 
 	constructor() payable {
 		BuchiChecker bc = new BuchiChecker();
 		buchi_checker_address =	 address(bc);
-        winner = msg.sender;
 	}
 
 

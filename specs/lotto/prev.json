@@ -1,9 +1,11 @@
 [
 	{
+        "name": "v0",
 		"triggers": ["Lotto.FUNCTION"],
 		"condition": "FUNCTION == \"sendToWinner\""
 	},
     {
+        "name": "v1",
 		"triggers": ["Lotto.payedOut"],
 		"condition": "this.balance == prev(this.balance) - winAmount"
 	}

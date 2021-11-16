@@ -18,7 +18,7 @@ contract PredictTheBlockHashChallenge {
     mapping(address => guess) guesses;
 
     constructor() public payable {
-        require(msg.value == 1 ether);
+        // require(msg.value == 1 ether); removing for fuzzing DJW
     }
 
     function lockInGuess(bytes32 hash) public payable {

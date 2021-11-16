@@ -154,9 +154,15 @@ class SourceInstrumentor:
     """Runtime property-checking instrumentator "visitor" pattern class
     """
     def __init__(self, source_lines, updaters, prevs, state_var_types):
+        self.use_call_stack = False
         self.updaters = updaters
         self.source_lines = [[l] for l in source_lines]
-        self.source_lines[-1].extend(pprint_checker())
+        s = pprint_checker()
+        if self.use_call_stack:
+            s = s.replace("{CALL_DEPTH}", CALL_DEPTH_TRACKING)
+        else:
+            s = s.replace("{CALL_DEPTH}", "")
+        self.source_lines[-1].extend(s)
         self.contract_name = None
         self.prevs = prevs
         self.state_var_types = state_var_types
@@ -213,6 +219,8 @@ class SourceInstrumentor:
         fn_name = get_fn_name(n)
         if len(n.body) > 0:
             self.source_lines[first_line(n) - 1].extend(HEADER)
+            if self.use_call_stack:
+                self.source_lines[first_line(n) - 1].append("bc.enter();\n")
 
             first_instrumentations = []
             for update in self.updaters[self.contract_name]["msg.sender"]:
@@ -227,7 +235,7 @@ class SourceInstrumentor:
                     fn_updated = update
                     fn_updates.extend(pprint_update(update, fn_name))
 
-            if len(fn_updates) > 0:
+            if len(fn_updates) > 0 and self.use_call_stack:
                 fn_updates = ["if (bc.get_call_depth() <= 1) {\n"] + fn_updates
                 fn_updates.append("}\n")
             first_instrumentations.extend(fn_updates)
@@ -248,15 +256,22 @@ class SourceInstrumentor:
         if len(end_updates) > 0:
             updated.append("FUNCTION_END")
 
-        end_updates.append(FOOTER)
-
-        if len(fn_updates) > 0:
+        if self.use_call_stack:
             end_updates.append("if (bc.get_call_depth() <= 1) {\n")
-            end_updates.extend(pprint_update(
-                fn_updated, fn_name, exit_fn=True))  # exit fn after check
+        end_updates.append("bc.apply_updates_and_check();\n")
+        if self.use_call_stack:
             end_updates.append("}\n")
 
-        end_updates.append("bc.exit();\n")
+        if len(fn_updates) > 0:
+            if self.use_call_stack:
+                end_updates.append("if (bc.get_call_depth() <= 1) {\n")
+            end_updates.extend(pprint_update(
+                fn_updated, fn_name, exit_fn=True))  # exit fn after check
+            if self.use_call_stack:
+                end_updates.append("}\n")
+
+        if self.use_call_stack:
+            end_updates.append("bc.exit();\n")
 
         if len(n.body) > 0:
             for line, is_ret in fn_exits(n):
@@ -291,23 +306,11 @@ INITIALIZE_CLIENT = """function initialize(address a) {
         }
 }
     """
-FOOTER = "bc.apply_updates();\nbc.check();\n"
+
 HEADER = """BuchiChecker bc = BuchiChecker(buchi_checker_address);
-            address prev_bc_address = buchi_checker_address;
-            bc.enter();\n"""
+            address prev_bc_address = buchi_checker_address;\n"""
 
-
-def pprint_checker():
-    """Pretty-prints the monitoring contract
-    """
-
-    return """
-\n\ncontract BuchiChecker {
-        uint256 state = {INITIAL_STATE};
-        uint32[] updates_k;
-        bool[] updates_v;
-        mapping(uint32 => bool) vars;
-        bool public invalid = false;
+CALL_DEPTH_TRACKING = """
         uint32 call_depth;
         
         function enter(){
@@ -321,32 +324,37 @@ def pprint_checker():
         function get_call_depth() returns (uint32) {
             return call_depth;
         }
+"""
 
+
+def pprint_checker():
+    """Pretty-prints the monitoring contract
+    """
+
+    return """
+\n\ncontract BuchiChecker {
+        uint256 state = {INITIAL_STATE};
+        uint32[] updates_k;
+        bool[] updates_v;
+        mapping(uint32 => bool) vars;
+        bool public invalid = false;
+        {CALL_DEPTH}
+        
         function update(uint32 k, bool v) {
                 updates_k.push(k);
                 updates_v.push(v);
         }
 
-        function apply_updates() {
-                if (call_depth > 1) { return; }
-                while (updates_v.length > 0) {
-                        uint32 k = updates_k[updates_k.length-1];
-                        updates_k.length--;
+        function apply_updates_and_check() {
+            for (uint i=0; i < updates_v.length; i++) {
+                uint32 k = updates_k[i];
+                bool v = updates_v[i];
+                vars[k] = v;
+            }
+            updates_k.length = 0;
+            updates_v.length = 0;
 
-                        bool v = updates_v[updates_v.length-1];
-                        updates_v.length--;
-
-                        vars[k] = v;
-                }
-        }
-
-        function sum(uint32[] n) returns (uint32) {
-            return 0;
-        }
-
-        function check() {
-                if (call_depth > 1) { return; }
-               {CHECK_SWITCH_CASE} 
+            {CHECK_SWITCH_CASE} 
         }
 }
     """

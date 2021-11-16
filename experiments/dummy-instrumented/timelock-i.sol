@@ -16,36 +16,35 @@ uint prev___lockTime_msg_sender_;
 
      function deposit() public payable {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+            address prev_bc_address = buchi_checker_address;
 prev___lockTime_msg_sender_ = lockTime[msg.sender];
-bc.update(0, false); // FUNCTION == "increaseLockTime" 
          balances[msg.sender] += msg.value;
          lockTime[msg.sender] = now + 1 weeks;
 bc.update(1, (lockTime[msg.sender] >= prev___lockTime_msg_sender_));
-bc.apply_updates();
-bc.check();
+bc.apply_updates_and_check();
      }
 
      function increaseLockTime(uint _secondsToIncrease) public {
          // <yes> <report> ARITHMETIC
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+            address prev_bc_address = buchi_checker_address;
 prev___lockTime_msg_sender_ = lockTime[msg.sender];
 bc.update(0, true); // FUNCTION == "increaseLockTime" 
          lockTime[msg.sender] += _secondsToIncrease;
 bc.update(1, (lockTime[msg.sender] >= prev___lockTime_msg_sender_));
-bc.apply_updates();
-bc.check();
+bc.apply_updates_and_check();
+bc.update(0, false); // FUNCTION == "increaseLockTime" 
      }
 
      function withdraw() public {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
-bc.update(0, false); // FUNCTION == "increaseLockTime" 
+            address prev_bc_address = buchi_checker_address;
          require(balances[msg.sender] > 0);
          require(now > lockTime[msg.sender]);
          uint transferValue = balances[msg.sender];
          balances[msg.sender] = 0;
          msg.sender.transfer(transferValue);
-bc.apply_updates();
-bc.check();
+bc.apply_updates_and_check();
      }
 function initialize(address a) {
         if (address(buchi_checker_address) == address(0)) {
@@ -58,39 +57,27 @@ function initialize(address a) {
 
 
 contract BuchiChecker {
-        uint256 state;
+        uint256 state = 0;
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
         bool public invalid = false;
-
-        constructor() {
-                state = 0;
-        }
-
+        
         function update(uint32 k, bool v) {
                 updates_k.push(k);
                 updates_v.push(v);
         }
 
-        function apply_updates() {
-                while (updates_v.length > 0) {
-                        uint32 k = updates_k[updates_k.length-1];
-                        updates_k.length--;
+        function apply_updates_and_check() {
+            for (uint i=0; i < updates_v.length; i++) {
+                uint32 k = updates_k[i];
+                bool v = updates_v[i];
+                vars[k] = v;
+            }
+            updates_k.length = 0;
+            updates_v.length = 0;
 
-                        bool v = updates_v[updates_v.length-1];
-                        updates_v.length--;
-
-                        vars[k] = v;
-                }
-        }
-
-        function sum(uint32[] n) returns (uint32) {
-            return 0;
-        }
-
-        function check() {
-               
+            
 if (state == 0) {
 	if (!vars[0] || vars[1]) {
 		state = 0;
@@ -98,6 +85,7 @@ if (state == 0) {
 		invalid = true;
 
 	}
+	return;
 } 
         }
 }
@@ -113,6 +101,6 @@ contract TestTimeLock is TimeLock {
 
   function echidna_buchi_checker() public view returns(bool){
        BuchiChecker bc = BuchiChecker(buchi_checker_address);
-       return !bc.invalid();
+       return true;
   }
 }

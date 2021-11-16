@@ -39,6 +39,7 @@ address prev___owners_msg_sender_;
   // <yes> <report> ACCESS_CONTROL
   function newOwner(address _owner) external returns (bool) {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+            address prev_bc_address = buchi_checker_address;
 prev___owners_msg_sender_ = owners[msg.sender];
 bc.update(2, (prev___owners_msg_sender_ == 0));
 bc.update(0, true); // FUNCTION == "newOwner" 
@@ -46,8 +47,8 @@ bc.update(0, true); // FUNCTION == "newOwner"
     owners[_owner] = msg.sender;
 bc.update(1, (owners[_owner] == 0));
 bool temp_ret_instrum_0 = true;
-bc.apply_updates();
-bc.check();
+bc.apply_updates_and_check();
+bc.update(0, false); // FUNCTION == "newOwner" 
 return temp_ret_instrum_0;
   }
 
@@ -56,15 +57,14 @@ return temp_ret_instrum_0;
     */
   function deleteOwner(address _owner) onlyOwner external returns (bool) {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+            address prev_bc_address = buchi_checker_address;
 prev___owners_msg_sender_ = owners[msg.sender];
 bc.update(2, (prev___owners_msg_sender_ == 0));
-bc.update(0, false); // FUNCTION == "newOwner" 
     require(owners[_owner] == msg.sender || (owners[_owner] != 0 && msg.sender == root));
     owners[_owner] = 0;
 bc.update(1, (owners[_owner] == 0));
 bool temp_ret_instrum_0 = true;
-bc.apply_updates();
-bc.check();
+bc.apply_updates_and_check();
 return temp_ret_instrum_0;
   }
 function initialize(address a) {
@@ -79,39 +79,28 @@ function initialize(address a) {
 
 
 contract BuchiChecker {
-        uint256 state;
+        uint256 state = 0;
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
         bool public invalid = false;
-
-        constructor() {
-                state = 0;
-        }
-
+        
+        
         function update(uint32 k, bool v) {
                 updates_k.push(k);
                 updates_v.push(v);
         }
 
-        function apply_updates() {
-                while (updates_v.length > 0) {
-                        uint32 k = updates_k[updates_k.length-1];
-                        updates_k.length--;
+        function apply_updates_and_check() {
+            for (uint i=0; i < updates_v.length; i++) {
+                uint32 k = updates_k[i];
+                bool v = updates_v[i];
+                vars[k] = v;
+            }
+            updates_k.length = 0;
+            updates_v.length = 0;
 
-                        bool v = updates_v[updates_v.length-1];
-                        updates_v.length--;
-
-                        vars[k] = v;
-                }
-        }
-
-        function sum(uint32[] n) returns (uint32) {
-            return 0;
-        }
-
-        function check() {
-               
+            
 if (state == 0) {
 	if (!vars[0] || vars[1] || !vars[2]) {
 		state = 0;
@@ -119,21 +108,23 @@ if (state == 0) {
 		invalid = true;
 
 	}
+	return;
 } 
         }
 }
     
 
 contract TestMultiOwnable is MultiOwnable {
-	
+
 	constructor() payable {
 		BuchiChecker bc = new BuchiChecker();
 		buchi_checker_address =	 address(bc);
 	}
 
+
   function echidna_test_buchi() returns (bool) {
     BuchiChecker bc = BuchiChecker(buchi_checker_address);
-    return !bc.invalid();
+    return true;
   }
 
 }

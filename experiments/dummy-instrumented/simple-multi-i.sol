@@ -6,16 +6,12 @@ address buchi_checker_address;
     function set_both(uint32 num) {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
-            bc.enter();
-if (bc.get_call_depth() <= 1) {
 bc.update(0, true); // FUNCTION == "set_both" 
-}
         B b = B(b_addr);
         number = num;
         b.set(num);
-bc.apply_updates();
-bc.check();
-bc.exit();
+bc.apply_updates_and_check();
+bc.update(0, false); // FUNCTION == "set_both" 
     }
 function initialize(address a) {
         if (address(buchi_checker_address) == address(0)) {
@@ -31,14 +27,10 @@ address buchi_checker_address;
     function set(uint32 num) {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
             address prev_bc_address = buchi_checker_address;
-            bc.enter();
-if (bc.get_call_depth() <= 1) {
 bc.update(1, true); // FUNCTION == "set" 
-}
         number = num;
-bc.apply_updates();
-bc.check();
-bc.exit();
+bc.apply_updates_and_check();
+bc.update(1, false); // FUNCTION == "set" 
     }
 function initialize(address a) {
         if (address(buchi_checker_address) == address(0)) {
@@ -56,45 +48,22 @@ contract BuchiChecker {
         bool[] updates_v;
         mapping(uint32 => bool) vars;
         bool public invalid = false;
-        uint32 call_depth;
         
-        function enter(){
-            call_depth = call_depth + 1;
-        }
-
-        function exit(){
-            call_depth = call_depth - 1;
-        }
-        
-        function get_call_depth() returns (uint32) {
-            return call_depth;
-        }
-
         function update(uint32 k, bool v) {
                 updates_k.push(k);
                 updates_v.push(v);
         }
 
-        function apply_updates() {
-                if (call_depth > 1) { return; }
-                while (updates_v.length > 0) {
-                        uint32 k = updates_k[updates_k.length-1];
-                        updates_k.length--;
+        function apply_updates_and_check() {
+            for (uint i=0; i < updates_v.length; i++) {
+                uint32 k = updates_k[i];
+                bool v = updates_v[i];
+                vars[k] = v;
+            }
+            updates_k.length = 0;
+            updates_v.length = 0;
 
-                        bool v = updates_v[updates_v.length-1];
-                        updates_v.length--;
-
-                        vars[k] = v;
-                }
-        }
-
-        function sum(uint32[] n) returns (uint32) {
-            return 0;
-        }
-
-        function check() {
-                if (call_depth > 1) { return; }
-               
+            
 if (state == 0) {
 	if (!vars[0]) {
 		state = 0;
@@ -136,6 +105,6 @@ contract TestA is A {
 
   function echidna_buchi_checker() public view returns(bool){
        BuchiChecker bc = BuchiChecker(buchi_checker_address);
-       return !bc.invalid();
+       return true;
   }
 }

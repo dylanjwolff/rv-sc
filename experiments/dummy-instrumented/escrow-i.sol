@@ -22,33 +22,32 @@ address buchi_checker_address;
     
     function deposit() onlyBuyer external payable {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+            address prev_bc_address = buchi_checker_address;
 bc.update(1, (msg.sender == buyer));
-bc.update(0, false); // FUNCTION == "cancel" 
         require(currState == State.AWAITING_PAYMENT, "Already paid");
         currState = State.AWAITING_DELIVERY;
-bc.apply_updates();
-bc.check();
+bc.apply_updates_and_check();
     }
     
     function confirmDelivery() onlyBuyer external {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+            address prev_bc_address = buchi_checker_address;
 bc.update(1, (msg.sender == buyer));
-bc.update(0, false); // FUNCTION == "cancel" 
         require(currState == State.AWAITING_DELIVERY, "Cannot confirm delivery");
         seller.transfer(address(this).balance);
         currState = State.COMPLETE;
-bc.apply_updates();
-bc.check();
+bc.apply_updates_and_check();
     }
 
     function cancel() external {
 BuchiChecker bc = BuchiChecker(buchi_checker_address);
+            address prev_bc_address = buchi_checker_address;
 bc.update(1, (msg.sender == buyer));
 bc.update(0, true); // FUNCTION == "cancel" 
         buyer.transfer(address(this).balance);
 	currState = State.AWAITING_PAYMENT;
-bc.apply_updates();
-bc.check();
+bc.apply_updates_and_check();
+bc.update(0, false); // FUNCTION == "cancel" 
     }
 function initialize(address a) {
         if (address(buchi_checker_address) == address(0)) {
@@ -60,39 +59,28 @@ function initialize(address a) {
 
 
 contract BuchiChecker {
-        uint256 state;
+        uint256 state = 0;
         uint32[] updates_k;
         bool[] updates_v;
         mapping(uint32 => bool) vars;
         bool public invalid = false;
-
-        constructor() {
-                state = 0;
-        }
-
+        
+        
         function update(uint32 k, bool v) {
                 updates_k.push(k);
                 updates_v.push(v);
         }
 
-        function apply_updates() {
-                while (updates_v.length > 0) {
-                        uint32 k = updates_k[updates_k.length-1];
-                        updates_k.length--;
+        function apply_updates_and_check() {
+            for (uint i=0; i < updates_v.length; i++) {
+                uint32 k = updates_k[i];
+                bool v = updates_v[i];
+                vars[k] = v;
+            }
+            updates_k.length = 0;
+            updates_v.length = 0;
 
-                        bool v = updates_v[updates_v.length-1];
-                        updates_v.length--;
-
-                        vars[k] = v;
-                }
-        }
-
-        function sum(uint32[] n) returns (uint32) {
-            return 0;
-        }
-
-        function check() {
-               
+            
 if (state == 0) {
 	if (!vars[0] || vars[1]) {
 		state = 0;
@@ -100,18 +88,18 @@ if (state == 0) {
 		invalid = true;
 
 	}
+	return;
 } 
         }
 }
     
-
-
 
 contract TestEscrow is Escrow {
 
 	constructor() Escrow(msg.sender, msg.sender) payable {
 		BuchiChecker bc = new BuchiChecker();
 		buchi_checker_address =	 address(bc);
+		
 	}
 
 

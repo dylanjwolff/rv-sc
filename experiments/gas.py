@@ -107,7 +107,7 @@ else:
     (dfg, dft) = gather_data(contracts_files, 30)
     dfg.to_pickle(path_g)
     dft.to_pickle(path_t)
-dfg = dfg.drop("timeoutBet", axis=1)
+
 dfg = dfg.stack()
 dfg.name = "gas"
 dfg = dfg.reset_index()
@@ -118,21 +118,13 @@ dft = dft.reset_index()
 style.use('ggplot')
 
 sns.catplot(
-    x="file",  # x variable name
-    y="time (s)",  # y variable name
-    data=dft,  # dataframe to plot
-    kind="bar")
-
-# plt.show()
-
-sns.catplot(
     x="function",  # x variable name
     y="gas",  # y variable name
     hue="file",  # group variable name
     data=dfg,  # dataframe to plot
     kind="bar")
 
-# plt.show()
+plt.show()
 
 base_path = "experiments/dummy-instrumented/"
 files = os.listdir(base_path)
@@ -140,7 +132,7 @@ files = [base_path + f for f in files if os.path.isfile(base_path + f)]
 
 contracts_files = [(get_test_name_from_file(f), f) for f in files]
 
-path_dummy_t = "experiments/dummy_times_casino.pkl"
+path_dummy_t = "experiments/dummy_times.pkl"
 if os.path.isfile(path_dummy_t):
     times = pd.read_pickle(path_dummy_t)
 else:

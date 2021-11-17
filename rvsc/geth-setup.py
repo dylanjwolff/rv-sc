@@ -6,11 +6,9 @@ from solidity_parser import parser
 from . import solc_vm
 
 
-def web3_setup():
-    # @TODO change to use environment variable
-    w3 = Web3(Web3.HTTPProvider('http://127.0.0.1:8545'))
+def web3_geth_setup():
 
-    # @TODO use environment variable to indicate GETH?
+    w3 = Web3(Web3.HTTPProvider('http://127.0.0.1:8545'))
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
     w3.eth.default_account = w3.eth.accounts[0]
     return w3

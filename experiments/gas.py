@@ -7,6 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.style as style
 import time
+from os import listdir
 
 
 def single_trial(contract_name,
@@ -77,6 +78,17 @@ def gather_data(contracts_files, trials, num_tests=200):
     return (dfg, dft)
 
 
+TEST_NAME_RE = re.compile(r"contract\s+(Test\S+)")
+
+
+def get_test_name_from_file(path):
+    f = open(path)
+    s = f.read()
+    o = re.search(TEST_NAME_RE, s)
+    test_name = o.group(1)
+    return test_name
+
+
 contract_name = "TestCasino"
 base_contract_file = "experiments/casino/casino-baseline.sol"
 larva_contract_file = "experiments/casino/casino-larva.sol"
@@ -111,7 +123,7 @@ sns.catplot(
     data=dft,  # dataframe to plot
     kind="bar")
 
-plt.show()
+# plt.show()
 
 sns.catplot(
     x="function",  # x variable name
@@ -120,4 +132,27 @@ sns.catplot(
     data=dfg,  # dataframe to plot
     kind="bar")
 
-plt.show()
+# plt.show()
+
+base_path = "experiments/dummy-instrumented/"
+files = os.listdir(base_path)
+files = [base_path + f for f in files if os.path.isfile(base_path + f)]
+
+contracts_files = [(get_test_name_from_file(f), f) for f in files]
+
+path_dummy_t = "experiments/dummy_times_casino.pkl"
+if os.path.isfile(path_dummy_t):
+    times = pd.read_pickle(path_dummy_t)
+else:
+    (_, times) = gather_data(contracts_files, 30, num_tests=1000)
+    times.to_pickle(path_dummy_t)
+
+tput = 1000 / times
+print(tput.index.levels[0])
+
+desc = tput.groupby("file").describe()
+for c in desc.columns:
+    if not ("mean" in c[1] or "std" in c[1]):
+        desc = desc.drop(c, axis=1)
+tput = desc.stack()
+print(tput.round(2).to_latex())

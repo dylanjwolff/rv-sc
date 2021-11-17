@@ -2,7 +2,7 @@ from rvsc import instrumentor
 from rvsc import ltl_tools
 import json
 import tempfile
-from rvsc import experiments
+from rvsc import node_setup
 import os
 import pytest
 import polling2
@@ -55,18 +55,17 @@ def test_smoke_e2e_Zilliqa(geth_ethnode):
         ftemp.write(s)
         ifname = ftemp.name
 
-    w3 = experiments.web3_setup()
+    w3 = node_setup.web3_geth_setup()
 
-    original_contracts = experiments.compile_contracts(w3, ofname)
-    instrum_contracts = experiments.compile_contracts(w3, ifname)
+    original_contracts = node_setup.compile_contracts(w3, ofname)
+    instrum_contracts = node_setup.compile_contracts(w3, ifname)
 
-    (constructedZ, ) = experiments.constructZilliqaToken(
-        w3, original_contracts)
+    (constructedZ, ) = node_setup.constructZilliqaToken(w3, original_contracts)
 
     tx_hash = constructedZ.functions.burn(50).transact()
     tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
-    (constructedZ, ) = experiments.constructZilliqaToken(
+    (constructedZ, ) = node_setup.constructZilliqaToken(
         w3, instrum_contracts, True)
 
     tx_hash = constructedZ.functions.burn(50).transact()

@@ -1,11 +1,11 @@
 [
         {
-		"name": "v0",
+                "name": "v0",
                 "triggers": ["ZilliqaToken.FUNCTION"],
                 "condition": "FUNCTION == transfer"
         },
         {
-		"name": "v1",
+                "name": "v1",
                 "triggers": ["ZilliqaToken.FUNCTION"],
                 "condition": "address != 0x0"
         }

@@ -6,26 +6,28 @@ A tool for multi-contract runtime/testtime verification
 ## Building
 This project has a large number of dependencies from disparate sources.
 The easiest way to build and use the project is with Docker.
-You can use e.g.:
+First **initialize the submodule for VerX benchmarks**:
+
+ `git submodule update --init --recursive`
+
+Then you can use e.g.:
 ```
 docker build . -t rvsc:latest
 docker run -it rvsc:latest /bin/bash
 ```
 
-After initializing the submodule for VerX benchmarks:
+The build process takes several minutes (up to 20), mostly from building Spot from source.
 
- `git submodule update --init --recursive`
- 
+If you don't want to build the image from scratch, it should be available on Docker Hub:
+```
+docker pull wolffdy/rvsc
+```
+
 Otherwise, you can follow along the steps in the Dockerfile locally to install yourself. 
 
 ### Dependency Notes
 
 Not necessary for the Docker Container, but maybe helpful for a local build.
-
-#### VerX Benchmarks
-
-Initially the plan had been to do hybrid verification on these benchmarks with VerX, but since that tool is no longer available we pivoted to using the SmartBugs repository instead.
-Still, one of the tests depends on a contract from this repository, so make sure you initialize that submodule with `git submodule update --init --recursive`
 
 #### Spot
 
@@ -50,6 +52,11 @@ If this occurs, you can use something like the wrapper script in the base direct
 
 I used the latest Linux static binary release 1.7.2, available on Github (see Dockerfile)
 
+#### VerX Benchmarks
+
+Initially the plan had been to do hybrid verification on these benchmarks with VerX, but since that tool is no longer available we pivoted to using the SmartBugs repository instead.
+Still, one of the tests depends on a contract from this repository, so make sure you initialize that submodule with `git submodule update --init --recursive`
+
 #### Python / Pip
 
 This has been tested using Python 3.9.7. 
@@ -59,11 +66,16 @@ I was only able to get libspot working manually (see Dockerfile).
 ## Usage
 
 ### Instrumentation
-The tool itself is a Python library in the rvsc directory, but can be used to instrument contracts with `python3 main.py ...` from the base directory of this repository.
+The tool itself is a Python library in the rvsc directory, but can be used to instrument contracts with:
+```python3 main.py```
+from the base directory of this repository.
 This CLI has a `--help` option with documentation.
-There are several sample contracts in `sample-contracts` and specifications for those contracts in `specs`.
+There are several sample contracts in the `sample-contracts` directory and specifications for those contracts in `specs`.
+
 For example you could do:
-`python3 main.py -s specs/lotto/prev.spot -m specs/lotto/prev.json -f -i sample-contracts/lotto.sol`
+```
+python3 main.py -s specs/lotto/prev.spot -m specs/lotto/prev.json -f -i sample-contracts/lotto.sol
+```
 To instrument the `lotto.sol` sample contract.
 
 ### Fuzzing
@@ -71,14 +83,22 @@ To instrument the `lotto.sol` sample contract.
 The Docker container also comes with a fuzzer, Echidna, that can be used to find violations of specifications in contracts.
 Echidna requires that the contact under test be extended with a special test-harness contract to find bugs.
 We've provided several harnesses for each of our examples alongside the specifications for the contract within the `specs` directory.
-You can append the test harness to the instrumented contract output by our tool with e.g. `cat specs/lotto/harness.sol >> out.sol` (`out.sol` being the name of your instrumented contract).
-Alternatively, the instrumented contracts in `example-instrumented` already have these harnesses and can fuzzed directly with no modifications.
-To fuzz a contract run e.g. `echidna-test --contract TestLotto example-instrumented/lotto-i.sol`.
+You can append the test harness to the instrumented contract output by our tool with e.g.:
+```cat specs/lotto/harness.sol >> out.sol```
+Here `out.sol` is the name of your instrumented contract.
+
+Alternatively, the instrumented contracts in `example-instrumented` should already have these harnesses and can fuzzed directly with no modifications.
+To fuzz a contract run e.g.:
+```echidna-test --contract TestLotto example-instrumented/lotto-i.sol```
 Here TestLotto is the name of the test harness contract, which can be found by looking in the Solidity file of the harnessed and instrumented contract.
 
 ### Experiments
 
 The code for running the experiments discussed in our presentation and report is in the `experiments` directory.
 The data from these experiments lives there as well.
-You can run the experiments in the Docker container with `python3 experiments/runner.py`, but the plots won't work for obvious reasons.
-By default it will pick up the data from the `.pkl` files rather than regenerating the data, so to run them fully again just delete those files.
+You can theoretically run the experiments in the Docker container with 
+```python3 experiments/runner.py```
+, but the plots won't work because it's running in a Docker container, and the data for the throughput experiment will be output in LaTeX table format, which is not very readable.
+The data for the MTTF experiment was gathered by hand due to Echidna having a mandatory, costly test-case reduction step that would otherwise greatly inflate the timings.
+This data is in a CSV file in the experiments directory.
+By default the experiment runner will pick up the data from the `.pkl` files rather than regenerating the data, so to run them fully again just delete those files (this may take several minutes).

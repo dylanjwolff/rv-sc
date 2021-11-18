@@ -21,7 +21,13 @@ RUN apt update
 RUN apt install -y software-properties-common
 RUN add-apt-repository -y ppa:ethereum/ethereum
 RUN apt update
-RUN apt install -y ethereum
+RUN apt install -y ethereum 
+
+RUN apt install -y wget
+RUN wget https://github.com/crytic/echidna/releases/download/v1.7.2/echidna-test-1.7.2-Ubuntu-18.04.tar.gz
+RUN tar -zxvf echidna-test-1.7.2-Ubuntu-18.04.tar.gz
+RUN mv echidna-test /usr/bin/echidna-test
+RUN ln -s ~/.solcx/solc-v0.4.26 /usr/bin/solc
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
@@ -30,6 +36,11 @@ COPY test/ test
 COPY rvsc/ rvsc
 COPY specs/ specs
 COPY config/ config
+COPY experiments/ experiments
+COPY example-instrumented/ example-instrumented
+COPY sample-contracts/ sample-contracts
+COPY wrapper wrapper
+
 
 RUN pytest
 

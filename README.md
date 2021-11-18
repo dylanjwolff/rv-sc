@@ -2,21 +2,61 @@
 [![main Actions Status](https://github.com/dylanjwolff/rv-sc/workflows/main/badge.svg)](https://github.com/dylanjwolff/rv-sc/actions)
 
 ## Building
-The easiest way to build the project is with docker.
+This project has a large number of dependencies from disparate sources.
+The easiest way to build and use the project is with Docker.
 You can use e.g.:
 ```
 docker build . -t rvsc:latest
 docker run -it rvsc:latest /bin/bash
 ```
 
-Otherwise, you can follow along the steps in the Dockerfile locally to install yourself.
+Otherwise, you can follow along the steps in the Dockerfile locally to install yourself. 
 
-## Parity / OpenEthereum
+### Dependency Notes
 
-Use `cargo +1.51.0 build --release --features final` to build... There seems to be a bug uncovered by the most recent stable release of `rustc`.
+Not necessary for the Docker Container, but maybe helpful for a local build.
+## VerX Benchmarks
+
+Initially the plan had been to do hybrid verification on these benchmarks with VerX, but since that tool is no longer available we pivoted to using the SmartBugs repository instead.
+Still, one of the tests depends on a contract from this repository, so make sure you initialize that submodule with `git submodule update --init --recursive`
 
 ## Spot
 
 This tool uses Spot to generate automata from LTL formulas.
 I've observed the website and repository for Spot to be down with quite some frequency in early October '21.
 As such, I've included a tarball with v2.9.8 of Spot in this repository directly to avoid sporadic CI issues.
+
+## Geth
+
+Installed via the Ubuntu package manager
+
+## Solc
+
+Installed with Solcx automatically by our tool on invocation (can be done manually with e.g. `python3 rvsc/solc_vm.py 0.4.26`)
+
+## Usage
+
+### Instrumentation
+The tool itself is a Python library in the rvsc directory, but can be used to instrument contracts with `python3 main.py ...` from the base directory of this repository.
+This CLI has a `--help` option with documentation.
+There are several sample contracts in `sample-contracts` and specifications for those contracts in `specs`.
+For example you could do:
+`python3 main.py -s specs/lotto/prev.spot -m specs/lotto/prev.json -f -i sample-contracts/lotto.sol`
+To instrument the `lotto.sol` sample contract.
+
+### Fuzzing
+
+The Docker container also comes with a fuzzer, Echidna, that can be used to find violations of specifications in contracts.
+Echidna requires that the contact under test be extended with a special test-harness contract to find bugs.
+We've provided several harnesses for each of our examples alongside the specifications for the contract within the `specs` directory.
+You can append the test harness to the instrumented contract output by our tool with e.g. `cat specs/lotto/harness.sol >> out.sol` (`out.sol` being the name of your instrumented contract).
+Alternatively, the instrumented contracts in `example-instrumented` already have these harnesses and can fuzzed directly with no modifications.
+To fuzz a contract run e.g. `echidna-test --contract TestLotto example-instrumented/lotto-i.sol`.
+Here TestLotto is the name of the test harness contract, which can be found by looking in the Solidity file of the harnessed and instrumented contract.
+
+### Experiments
+
+The code for running the experiments discussed in our presentation and report is in the `experiments` directory.
+The data from these experiments lives there as well.
+You can run the experiments in the Docker container with `python3 experiments/runner.py`, but the plots won't work for obvious reasons.
+By default it will pick up the data from the `.pkl` files rather than regenerating the data, so to run them fully again just delete those files.

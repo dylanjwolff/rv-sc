@@ -100,6 +100,7 @@ contracts_files = zip(
 
 path_g = "experiments/gas_casino.pkl"
 path_t = "experiments/time_casino.pkl"
+
 if os.path.isfile(path_g) and os.path.isfile(path_t):
     dfg = pd.read_pickle(path_g)
     dft = pd.read_pickle(path_t)
@@ -107,6 +108,7 @@ else:
     (dfg, dft) = gather_data(contracts_files, 30)
     dfg.to_pickle(path_g)
     dft.to_pickle(path_t)
+dfg = dfg.drop("timeoutBet", axis=1) # Gas DoS vuln makes the graph unreadable with this included. Trend evident with placeBet, so no need to include 
 
 dfg = dfg.stack()
 dfg.name = "gas"
@@ -116,6 +118,7 @@ dft = dft.reset_index()
 
 # style.use('seaborn-poster')  #sets the size of the charts
 style.use('ggplot')
+sns.set_context("paper", font_scale=1.5)
 
 sns.catplot(
     x="function",  # x variable name

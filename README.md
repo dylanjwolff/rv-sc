@@ -12,28 +12,33 @@ docker build . -t rvsc:latest
 docker run -it rvsc:latest /bin/bash
 ```
 
+After initializing the submodule for VerX benchmarks:
+
+ `git submodule update --init --recursive`
+ 
 Otherwise, you can follow along the steps in the Dockerfile locally to install yourself. 
 
 ### Dependency Notes
 
 Not necessary for the Docker Container, but maybe helpful for a local build.
-## VerX Benchmarks
+
+#### VerX Benchmarks
 
 Initially the plan had been to do hybrid verification on these benchmarks with VerX, but since that tool is no longer available we pivoted to using the SmartBugs repository instead.
 Still, one of the tests depends on a contract from this repository, so make sure you initialize that submodule with `git submodule update --init --recursive`
 
-## Spot
+#### Spot
 
 This tool uses Spot to generate automata from LTL formulas.
 I've observed the website and repository for Spot to be down with quite some frequency in early October '21.
 As such, I've included a tarball with v2.9.8 of Spot in this repository directly to avoid sporadic CI issues.
 I was only able to get this working by building and installing it manually (see Dockerfile for steps).
 
-## Geth
+#### Geth
 
 Installed via the Ubuntu package manager
 
-## Solc
+#### Solc
 
 Installed with Solcx automatically by our tool on invocation (can be done manually with e.g. `python3 rvsc/solc_vm.py 0.4.26`).
 Echidna expects `solc` to be on path, so you'll need to symbolically link to `~/solcx/----` as well for that.
@@ -41,11 +46,11 @@ Echidna expects `solc` to be on path, so you'll need to symbolically link to `~/
 I observed a bug on one of my machines that prevented Echidna from fuzzing contracts that compiled with warnings.
 If this occurs, you can use something like the wrapper script in the base directory as your Solc installation.
 
-## Echidna
+#### Echidna
 
 I used the latest Linux static binary release 1.7.2, available on Github (see Dockerfile)
 
-## Python / Pip
+#### Python / Pip
 
 This has been tested using Python 3.9.7. 
 All Python related dependencies can be installed from the `requirements.txt` file except for libspot.

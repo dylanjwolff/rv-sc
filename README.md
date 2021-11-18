@@ -1,6 +1,8 @@
 # Runtime Verification of Smart Contracts
 [![main Actions Status](https://github.com/dylanjwolff/rv-sc/workflows/main/badge.svg)](https://github.com/dylanjwolff/rv-sc/actions)
 
+A tool for multi-contract runtime/testtime verification
+
 ## Building
 This project has a large number of dependencies from disparate sources.
 The easiest way to build and use the project is with Docker.
@@ -25,6 +27,7 @@ Still, one of the tests depends on a contract from this repository, so make sure
 This tool uses Spot to generate automata from LTL formulas.
 I've observed the website and repository for Spot to be down with quite some frequency in early October '21.
 As such, I've included a tarball with v2.9.8 of Spot in this repository directly to avoid sporadic CI issues.
+I was only able to get this working by building and installing it manually (see Dockerfile for steps).
 
 ## Geth
 
@@ -32,7 +35,21 @@ Installed via the Ubuntu package manager
 
 ## Solc
 
-Installed with Solcx automatically by our tool on invocation (can be done manually with e.g. `python3 rvsc/solc_vm.py 0.4.26`)
+Installed with Solcx automatically by our tool on invocation (can be done manually with e.g. `python3 rvsc/solc_vm.py 0.4.26`).
+Echidna expects `solc` to be on path, so you'll need to symbolically link to `~/solcx/----` as well for that.
+
+I observed a bug on one of my machines that prevented Echidna from fuzzing contracts that compiled with warnings.
+If this occurs, you can use something like the wrapper script in the base directory as your Solc installation.
+
+## Echidna
+
+I used the latest Linux static binary release 1.7.2, available on Github (see Dockerfile)
+
+## Python / Pip
+
+This has been tested using Python 3.9.7. 
+All Python related dependencies can be installed from the `requirements.txt` file except for libspot.
+I was only able to get libspot working manually (see Dockerfile).
 
 ## Usage
 

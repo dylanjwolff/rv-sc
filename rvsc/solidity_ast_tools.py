@@ -41,6 +41,8 @@ class StateVarTyper:
 
 class SourcePrettyPrinter:
     """Pretty-printer for the Solidity AST
+
+    Printing strategy inspired by the Solythesis Typescript pretty-printer 
     """
     def __init__(self, source_lines):
         self.source_lines = source_lines

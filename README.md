@@ -48,6 +48,9 @@ Echidna expects `solc` to be on path, so you'll need to symbolically link to `~/
 I observed a bug on one of my machines that prevented Echidna from fuzzing contracts that compiled with warnings.
 If this occurs, you can use something like the wrapper script in the base directory as your Solc installation.
 
+I've only tested this tool with solc-v0.4.26.
+Newer versions of Solidity have significantly different syntax and thus may not work out-of-the box.
+
 #### Echidna
 
 I used the latest Linux static binary release 1.7.2, available on Github (see Dockerfile)
@@ -67,7 +70,9 @@ I was only able to get libspot working manually (see Dockerfile).
 
 ### Instrumentation
 The tool itself is a Python library in the rvsc directory, but can be used to instrument contracts with:
-```python3 main.py```
+```
+python3 main.py
+```
 from the base directory of this repository.
 This CLI has a `--help` option with documentation.
 There are several sample contracts in the `sample-contracts` directory and specifications for those contracts in `specs`.
@@ -78,6 +83,22 @@ python3 main.py -s specs/lotto/prev.spot -m specs/lotto/prev.json -f -i sample-c
 ```
 To instrument the `lotto.sol` sample contract.
 
+### Specifications
+
+To write a specification, you first need to create a file with the LTL boolean abstraction of the formula.
+Examples of this are in the `specs` directory and have the `.spot` extension.
+You can read more [here](https://spot.lrde.epita.fr/concepts.html#ltl).
+
+You will additionally need a JSON file that maps variables in your LTL formula to Solidity expressions.
+Examples of these are also in the `specs` directory, having a `.json` extension.
+The JSON file is a list of mappings, each mapping corresponding to a variable in the LTL formula.
+The mapping must have:
+1. "name": the name of the LTL variable
+2. "triggers": a list of Solidity(+) variables that, when changed, could influence the value of the condition. Each Solidity variable should be in the CONTRACT.VARIABLE format.
+3. "condition": the Solidity(+) expression that corresponds to the named LTL variable.
+
+Note that Solidity(+) includes `prev` and function entries and exits as discussed in the report.
+
 ### Fuzzing
 
 The Docker container also comes with a fuzzer, Echidna, that can be used to find violations of specifications in contracts.
@@ -86,6 +107,7 @@ We've provided several harnesses for each of our examples alongside the specific
 You can append the test harness to the instrumented contract output by our tool with e.g.:
 ```cat specs/lotto/harness.sol >> out.sol```
 Here `out.sol` is the name of your instrumented contract.
+If you want to write your own harnesses, see the documentation for Echidna [here](https://github.com/crytic/building-secure-contracts/tree/master/program-analysis/echidna#echidna-tutorial)
 
 Alternatively, the instrumented contracts in `example-instrumented` should already have these harnesses and can fuzzed directly with no modifications.
 To fuzz a contract run e.g.:
